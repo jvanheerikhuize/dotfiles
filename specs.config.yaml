@@ -63,7 +63,7 @@ specifications:
 
   - id: "FEAT-0002"
     file: "specs/features/FEAT-0002-multi-type-package-support.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"

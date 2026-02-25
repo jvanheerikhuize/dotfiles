@@ -20,7 +20,12 @@ packages:
     # Disk management
     - gparted
 
-  snap: []
+  snap:
+    - code          # VS Code
+    - spotify
+
   flatpak: []
+
   deb: []
+
   custom: []

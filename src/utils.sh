@@ -111,3 +111,36 @@ if isinstance(val, list):
             print(item)
 PYEOF
 }
+
+# yaml_get_list_pairs <file> <dot.separated.key> <field1> <field2>
+# For each dict item in the list, prints "field1_val\tfield2_val" (tab-separated).
+# Items missing a field emit an empty string for that field.
+# Non-dict items are skipped.
+yaml_get_list_pairs() {
+  local file="$1"
+  local key="$2"
+  local field1="$3"
+  local field2="$4"
+  python3 - "$file" "$key" "$field1" "$field2" <<'PYEOF'
+import sys, yaml
+
+file, key, f1, f2 = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+with open(file) as f:
+    data = yaml.safe_load(f)
+
+val = data
+for k in key.split('.'):
+    if isinstance(val, dict):
+        val = val.get(k)
+    else:
+        val = None
+        break
+
+if isinstance(val, list):
+    for item in val:
+        if isinstance(item, dict):
+            v1 = item.get(f1, '') or ''
+            v2 = item.get(f2, '') or ''
+            print(f"{v1}\t{v2}")
+PYEOF
+}
