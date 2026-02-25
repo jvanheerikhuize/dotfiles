@@ -1,0 +1,188 @@
+# Feature Specification: AI Governance System
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0015"
+  title: "AI Governance System"
+  version: "1.0.0"
+  status: "draft"
+  priority: "high"
+  author: "Jerry"
+  created_at: "2026-02-26"
+  updated_at: "2026-02-26"
+  tags:
+    - ai
+    - governance
+    - documentation
+    - traceability
+    - template-sync
+
+description:
+  summary: |
+    Adopt the AI Governance System from the upstream template repository
+    (jvanheerikhuize/ai-template-repository), adding mandatory AI directives,
+    a persistent memory system, an ADR decision infrastructure, and a
+    template-sync runbook.
+
+  problem_statement: |
+    The template repository has been updated with a significant new governance
+    layer for AI assistants:
+    - No mandatory rules file means AI behaviour is only constrained by CLAUDE.md
+      guidelines, with no structured enforcement for decisions, forbidden actions,
+      or authorization checks.
+    - No persistent memory system means each AI session starts cold; gotchas,
+      learnings, and cross-session context must be re-discovered or held in
+      the auto-memory MEMORY.md file only.
+    - No Architecture Decision Record (ADR) infrastructure means architectural
+      decisions have no structured, searchable audit trail.
+    - No traceability matrix means there is no single document linking user
+      requests → specs → code → PRs end-to-end.
+    - No template-sync runbook means future template updates have no documented
+      adoption path.
+
+  proposed_solution: |
+    Adopt the governance layer from the template repo commit
+    "feat: Add AI governance system (directives, memory, authorizations, ADRs)"
+    by creating the following files, project-specifically filled in:
+
+    1. .ai/DIRECTIVES.md — mandatory rules the AI must comply with every session;
+       fill in project-specific sections (forbidden actions, required checks,
+       priority hierarchy, domain rules, communication rules).
+
+    2. .ai/memory/ — four persistent memory files:
+       - README.md (taken from template)
+       - AUTHORIZATIONS.md (base rules filled in for this project)
+       - SESSION_LOG.md (template structure + backfilled session summary)
+       - LEARNINGS.md (template structure + key gotchas from MEMORY.md)
+       - TRACEABILITY.md (template structure + rows for FEAT-0001 through FEAT-0006)
+
+    3. .ai/decisions/ — full ADR infrastructure:
+       - README.md (taken from template)
+       - INDEX.md (empty, Next ADR: 001)
+       - template.md already present; verify it matches template version
+
+    4. docs/runbooks/template-sync.md — adopted verbatim from template; documents
+       all three sync approaches (upstream remote, selective copy, GitHub Actions).
+
+    5. .claude/CLAUDE.md — add references to DIRECTIVES.md and memory files in
+       the Quick Start and "Before doing anything" sections.
+
+    6. Remove .ai/prompts/create-repository.md — this is a template meta-prompt
+       for initialising new repos from the template; irrelevant to the dotfiles
+       project. The other prompts (implementation.md, debug.md, review.md) remain.
+
+  out_of_scope:
+    - "Adding a GitHub Actions workflow for automated template sync (Option C in runbook)"
+    - "Filling in ADR-001 or any specific ADRs (those are written when decisions are made)"
+    - "Updating CLAUDE.md for all AI tools (Cursor, Copilot) — only .claude/CLAUDE.md is in scope"
+    - "Migrating all content from auto-memory MEMORY.md into the new memory files (only key gotchas)"
+
+  dependencies:
+    - "jvanheerikhuize/ai-template-repository commit: feat: Add AI governance system"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant starts a session"
+    then: ".ai/DIRECTIVES.md exists and contains all 6 sections filled in for this project"
+    and:
+      - "Section 1 (Core Directives) includes: read CONTEXT.md first, only implement approved specs, always update .ai docs before committing"
+      - "Section 2 (Forbidden Actions) includes: no commits to main, no hardcoded package lists, no secrets, no scripts/ for implementation code"
+      - "Section 3a (Decision Documentation) specifies when to create an ADR"
+      - "Section 3b (Memory Maintenance) specifies session-start reads and session-end writes"
+      - "Section 3c (Authorization Check) specifies gated actions and decision protocol"
+      - "Section 4 (Priority Hierarchy) is filled in with project values"
+      - "Section 5 (Communication Rules) is filled in"
+      - "Section 6 (Domain Rules) includes bash/YAML/idempotency rules specific to this project"
+
+  - id: "AC-002"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant needs to record a session"
+    then: ".ai/memory/SESSION_LOG.md exists with the template structure"
+    and:
+      - "Contains at least one backfilled session entry covering FEAT-0001 through FEAT-0006"
+      - "Follows the template format: ## [YYYY-MM-DD] Session NNN"
+
+  - id: "AC-003"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant needs to record accumulated knowledge"
+    then: ".ai/memory/LEARNINGS.md exists with the template structure"
+    and:
+      - "Contains at least the key gotchas currently documented in MEMORY.md"
+      - "Includes: [[ cond ]] && cmd under set -e gotcha"
+      - "Includes: return 0 vs bare return in dotfiles non-interactive guard"
+      - "Includes: smoke tests must use --force due to /etc/skel files"
+
+  - id: "AC-004"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant needs to check what work has been done"
+    then: ".ai/memory/TRACEABILITY.md exists with the template structure"
+    and:
+      - "Contains one row per implemented spec: TR-001 through TR-006 (FEAT-0001 to FEAT-0006)"
+      - "Each row links: request → spec file → ADR (— if none) → key files changed → PR"
+
+  - id: "AC-005"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant needs to check authorization for a gated action"
+    then: ".ai/memory/AUTHORIZATIONS.md exists with the Decision Protocol and Gated Action Categories"
+    and:
+      - "Base Rules → Never Allowed includes: no force push to main, no test bypass, no secrets"
+      - "Base Rules → Always Allowed includes: edits to .ai/memory/ and .ai/decisions/ files"
+      - "Base Rules → Always Ask includes: git push, git force, external calls"
+      - "Learned Authorizations table is empty (Next AUTH: 001)"
+
+  - id: "AC-006"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant needs to create an ADR"
+    then: ".ai/decisions/README.md exists describing when and how to create ADRs"
+    and:
+      - ".ai/decisions/INDEX.md exists with an empty table and 'Next ADR number: 001'"
+      - ".ai/decisions/template.md exists and matches the template repo version"
+
+  - id: "AC-007"
+    given: "The repository has the template governance system adopted"
+    when: "A future template update needs to be synced into this repo"
+    then: "docs/runbooks/template-sync.md exists describing all three sync approaches"
+    and:
+      - "The runbook documents which paths to take from template vs. keep from project"
+      - "The runbook is linked from docs/runbooks/README.md (if it exists)"
+
+  - id: "AC-008"
+    given: "The repository has the template governance system adopted"
+    when: "An AI assistant reads .claude/CLAUDE.md at the start of a session"
+    then: "The Quick Start section references .ai/DIRECTIVES.md as the first thing to read"
+    and:
+      - "The 'Before doing anything' list includes DIRECTIVES.md before CONTEXT.md"
+      - "A reference to .ai/memory/ files is present for session-start reads"
+
+  - id: "AC-009"
+    given: "The repository has the template governance system adopted"
+    when: "The .ai/prompts/ directory is inspected"
+    then: "create-repository.md is removed (template meta-prompt; irrelevant to this project)"
+    and:
+      - "implementation.md, debug.md, review.md remain untouched"
+
+technical_requirements:
+  constraints:
+    - "All new files must be Markdown; no binary files"
+    - "DIRECTIVES.md sections 3a/3b/3c are taken verbatim from the template (governed by template)"
+    - "DIRECTIVES.md sections 1/2/4/5/6 are project-specific and must be filled in, not left as template placeholders"
+    - "Memory files must use the exact template format so AI tooling can parse them consistently"
+    - "No existing implementation files (install.sh, src/, profiles/, dotfiles/) are touched"
+
+testing_requirements:
+  unit_tests: false
+  integration_tests: false
+  e2e_tests: false
+  test_scenarios:
+    - "All new files exist at expected paths"
+    - "DIRECTIVES.md contains no unfilled template placeholders (e.g. '[Full directive text here]')"
+    - "TRACEABILITY.md has rows TR-001 through TR-006 with correct spec references"
+    - "AUTHORIZATIONS.md Learned Authorizations table is empty (no AUTH rows yet)"
+    - "CLAUDE.md Quick Start references DIRECTIVES.md"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    All changes are documentation files only. No implementation code is modified.
+    Rollback by reverting the commit. No system state is affected.
