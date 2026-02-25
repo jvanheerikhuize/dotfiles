@@ -51,7 +51,7 @@ settings:
 specifications:
   - id: "FEAT-0001"
     file: "specs/features/FEAT-0001-core-provisioning-engine.yaml"
-    status: "approved"
+    status: "implemented"
     auto_implement: false
     priority: "critical"
     assignee: "Jerry"
