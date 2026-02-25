@@ -135,13 +135,15 @@ packages:
     - curl
     - git
   snap:
-    - []
+    - code            # package name passed to `snap install`
   flatpak:
-    - []
+    - org.gimp.GIMP   # app-id passed to `flatpak install flathub`
   deb:
-    - []              # URLs to .deb files
+    - name: gh        # package name (used for dpkg -s idempotency check)
+      url: https://github.com/cli/cli/releases/download/v2.67.0/gh_2.67.0_linux_amd64.deb
   custom:
-    - []              # Shell commands to run
+    - cmd: "curl -fsSL https://example.com/install.sh | bash"
+      idempotency_check: "command -v mytool"  # optional; skip if exits 0
 ```
 
 ---
@@ -180,13 +182,13 @@ Subdirectories are mirrored:
 
 ### 5.1 Per-Type Behaviour
 
-| Type | Command | Idempotency |
-|------|---------|-------------|
-| `apt` | `sudo apt-get install -y` | apt skips if already installed |
-| `snap` | `sudo snap install` | snap no-ops if already installed |
-| `flatpak` | `flatpak install -y` | flatpak no-ops if already installed |
-| `deb` | `wget <url> && sudo dpkg -i` | `dpkg -i` upgrades/reinstalls; check version first |
-| `custom` | eval of defined command | must be written idempotent by the spec author |
+| Type | Command | Idempotency check |
+|------|---------|-------------------|
+| `apt` | `sudo apt-get install -y` | `dpkg -s <pkg>` — skip if installed |
+| `snap` | `sudo snap install` | `snap list <pkg>` — skip if installed |
+| `flatpak` | `flatpak install -y flathub` | `flatpak info <id>` — skip if installed; auto-adds flathub remote |
+| `deb` | `wget <url> && sudo dpkg -i` | `dpkg -s <name>` — skip if installed; http URLs blocked without `--force` |
+| `custom` | `bash -c "<cmd>"` | optional `idempotency_check` field; if provided and exits 0, step is skipped |
 
 ### 5.2 Execution Order
 
@@ -262,3 +264,4 @@ See `../decisions/` for ADRs:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-02-25 | Jerry | Initial architecture for dotfiles provisioning system |
+| 1.1.0 | 2026-02-25 | Jerry | FEAT-0002: deb/custom schema, idempotency table updated |
