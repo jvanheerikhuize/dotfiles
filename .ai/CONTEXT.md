@@ -49,13 +49,15 @@
 ## 2. Current State
 
 ### Active Work
-- [ ] FEAT-0001: Core provisioning engine (install.sh + YAML manifest + apt + profile system)
+- [x] FEAT-0001: Core provisioning engine (install.sh + YAML manifest + apt + profile system)
+- [x] FEAT-0002: Multi-type package support (snap, flatpak, deb, custom)
+- [ ] FEAT-0003 through FEAT-0014: Pending (see specs.config.yaml)
 
 ### Recent Changes
-- 2026-02-25: Repository initialized from spec-driven development template
+- 2026-02-25: Repository initialized; FEAT-0001 and FEAT-0002 implemented
 
 ### Known Issues
-- None yet (greenfield)
+- None
 
 ---
 

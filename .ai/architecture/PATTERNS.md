@@ -160,46 +160,68 @@ EOF
 
 ## 7. YAML Parsing Pattern
 
-Use `python3` inline — it's on every Ubuntu 22.04 system by default.
+Use `python3` via heredoc — pass file path and keys as `sys.argv`, never via shell string interpolation.
 
 ```bash
 # Extract a scalar value from YAML
 yaml_get() {
-  local file="$1"
-  local key="$2"
-  python3 -c "
-import yaml
-with open('${file}') as f:
+  local file="$1" key="$2"
+  python3 - "$file" "$key" <<'PYEOF'
+import sys, yaml
+file, key = sys.argv[1], sys.argv[2]
+with open(file) as f:
     data = yaml.safe_load(f)
-keys = '${key}'.split('.')
 val = data
-for k in keys:
+for k in key.split('.'):
     val = val.get(k) if isinstance(val, dict) else None
-print(val if val is not None else '')
-"
+if val is not None and str(val).lower() not in ('none', 'null', '~'):
+    print(val)
+PYEOF
 }
 
-# Extract a list from YAML as newline-separated values
+# Extract a simple list from YAML (one item per line)
 yaml_get_list() {
-  local file="$1"
-  local key="$2"
-  python3 -c "
-import yaml
-with open('${file}') as f:
+  local file="$1" key="$2"
+  python3 - "$file" "$key" <<'PYEOF'
+import sys, yaml
+file, key = sys.argv[1], sys.argv[2]
+with open(file) as f:
     data = yaml.safe_load(f)
-keys = '${key}'.split('.')
 val = data
-for k in keys:
+for k in key.split('.'):
     val = val.get(k) if isinstance(val, dict) else None
 if isinstance(val, list):
     for item in val:
-        print(item)
-"
+        if item is not None:
+            print(item)
+PYEOF
+}
+
+# Extract a list of dicts as tab-separated pairs: "field1<TAB>field2"
+# Used for deb ({name, url}) and custom ({cmd, idempotency_check}) entries.
+yaml_get_list_pairs() {
+  local file="$1" key="$2" field1="$3" field2="$4"
+  python3 - "$file" "$key" "$field1" "$field2" <<'PYEOF'
+import sys, yaml
+file, key, f1, f2 = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+with open(file) as f:
+    data = yaml.safe_load(f)
+val = data
+for k in key.split('.'):
+    val = val.get(k) if isinstance(val, dict) else None
+if isinstance(val, list):
+    for item in val:
+        if isinstance(item, dict):
+            print(f"{item.get(f1,'') or ''}\t{item.get(f2,'') or ''}")
+PYEOF
 }
 
 # Usage:
 extends=$(yaml_get "profiles/desktop.yaml" "profile.extends")
-mapfile -t apt_packages < <(yaml_get_list "profiles/base.yaml" "packages.apt")
+while IFS= read -r pkg; do APT_PACKAGES+=("$pkg"); done \
+  < <(yaml_get_list "profiles/base.yaml" "packages.apt")
+while IFS= read -r entry; do DEB_PACKAGES+=("$entry"); done \
+  < <(yaml_get_list_pairs "profiles/dev.yaml" "packages.deb" "name" "url")
 ```
 
 ---
@@ -314,6 +336,8 @@ require_cmd python3
 APT_PACKAGES=()
 SNAP_PACKAGES=()
 FLATPAK_PACKAGES=()
+DEB_PACKAGES=()     # entries: "name<TAB>url"
+CUSTOM_PACKAGES=()  # entries: "cmd<TAB>idempotency_check"
 
 # Merge a profile with its parent (recursive, depth-first)
 load_profile() {
@@ -322,20 +346,37 @@ load_profile() {
 
   [[ -f "$profile_file" ]] || log_error "Profile not found: $profile_name"
 
+  # Recurse into parent first so base packages come first
   local extends
   extends=$(yaml_get "$profile_file" "profile.extends")
+  [[ -n "$extends" ]] && load_profile "$extends"
 
-  # Recurse into parent first (base packages come first)
-  if [[ -n "$extends" && "$extends" != "None" && "$extends" != "null" ]]; then
-    load_profile "$extends"
-  fi
-
-  # Append this profile's packages to the global arrays
-  while IFS= read -r pkg; do
-    [[ -n "$pkg" ]] && APT_PACKAGES+=("$pkg")
+  # Collect simple lists
+  while IFS= read -r pkg; do [[ -n "$pkg" ]] && APT_PACKAGES+=("$pkg")
   done < <(yaml_get_list "$profile_file" "packages.apt")
+
+  while IFS= read -r pkg; do [[ -n "$pkg" ]] && SNAP_PACKAGES+=("$pkg")
+  done < <(yaml_get_list "$profile_file" "packages.snap")
+
+  while IFS= read -r pkg; do [[ -n "$pkg" ]] && FLATPAK_PACKAGES+=("$pkg")
+  done < <(yaml_get_list "$profile_file" "packages.flatpak")
+
+  # Collect paired lists (deb and custom use dict entries)
+  local _n _u
+  while IFS= read -r _e; do
+    IFS=$'\t' read -r _n _u <<< "$_e"
+    [[ -n "$_n" && -n "$_u" ]] && DEB_PACKAGES+=("$_e")
+  done < <(yaml_get_list_pairs "$profile_file" "packages.deb" "name" "url")
+
+  local _c
+  while IFS= read -r _e; do
+    IFS=$'\t' read -r _c _ <<< "$_e"
+    [[ -n "$_c" ]] && CUSTOM_PACKAGES+=("$_e")
+  done < <(yaml_get_list_pairs "$profile_file" "packages.custom" "cmd" "idempotency_check")
 }
 ```
+
+**Important**: Never use `[[ cond ]] && cmd` as a statement under `set -e` — use `if [[ cond ]]; then cmd; fi` instead. When `[[ ]]` is false, the `&&` compound returns 1 and triggers `errexit`.
 
 ---
 

@@ -21,6 +21,10 @@ FORCE=false
 
 # Global arrays populated by load_profile()
 APT_PACKAGES=()
+SNAP_PACKAGES=()
+FLATPAK_PACKAGES=()
+DEB_PACKAGES=()     # entries are "name<TAB>url"
+CUSTOM_PACKAGES=()  # entries are "cmd<TAB>idempotency_check"
 _SEEN_PROFILES=()   # for circular extends detection
 PROFILE_CHAIN=()    # in application order (base → ... → target)
 
@@ -121,33 +125,69 @@ load_profile() {
     load_profile "$extends"
   fi
 
-  # Collect apt packages from this profile
+  # Collect packages from this profile (all types)
   while IFS= read -r pkg; do
     [[ -n "$pkg" ]] && APT_PACKAGES+=("$pkg")
   done < <(yaml_get_list "$profile_file" "packages.apt")
+
+  while IFS= read -r pkg; do
+    [[ -n "$pkg" ]] && SNAP_PACKAGES+=("$pkg")
+  done < <(yaml_get_list "$profile_file" "packages.snap")
+
+  while IFS= read -r pkg; do
+    [[ -n "$pkg" ]] && FLATPAK_PACKAGES+=("$pkg")
+  done < <(yaml_get_list "$profile_file" "packages.flatpak")
+
+  local _dname _durl
+  while IFS= read -r _entry; do
+    IFS=$'\t' read -r _dname _durl <<< "$_entry"
+    [[ -n "$_dname" && -n "$_durl" ]] && DEB_PACKAGES+=("$_entry")
+  done < <(yaml_get_list_pairs "$profile_file" "packages.deb" "name" "url")
+
+  local _ccmd
+  while IFS= read -r _entry; do
+    IFS=$'\t' read -r _ccmd _ <<< "$_entry"
+    [[ -n "$_ccmd" ]] && CUSTOM_PACKAGES+=("$_entry")
+  done < <(yaml_get_list_pairs "$profile_file" "packages.custom" "cmd" "idempotency_check")
 
   # Record in application order (after recursion = base first)
   PROFILE_CHAIN+=("$profile_name")
 }
 
 # deduplicate_packages
-# Removes duplicates from APT_PACKAGES while preserving order.
+# Removes duplicates from all package arrays while preserving order.
+# DEB and CUSTOM entries are deduped by their first field (name / cmd).
 deduplicate_packages() {
   local -A seen=()
   local result=()
-  local pkg
+  local item key
 
-  for pkg in "${APT_PACKAGES[@]+"${APT_PACKAGES[@]}"}"; do
-    if [[ -z "${seen[$pkg]+set}" ]]; then
-      seen["$pkg"]=1
-      result+=("$pkg")
-    fi
-  done
+  _dedup_simple() {
+    local -n _arr="$1"
+    seen=(); result=()
+    for item in "${_arr[@]+"${_arr[@]}"}"; do
+      if [[ -z "${seen[$item]+set}" ]]; then seen["$item"]=1; result+=("$item"); fi
+    done
+    _arr=()
+    if [[ ${#result[@]} -gt 0 ]]; then _arr=("${result[@]}"); fi
+  }
 
-  APT_PACKAGES=()
-  if [[ ${#result[@]} -gt 0 ]]; then
-    APT_PACKAGES=("${result[@]}")
-  fi
+  _dedup_paired() {
+    local -n _arr="$1"
+    seen=(); result=()
+    for item in "${_arr[@]+"${_arr[@]}"}"; do
+      IFS=$'\t' read -r key _ <<< "$item"
+      if [[ -z "${seen[$key]+set}" ]]; then seen["$key"]=1; result+=("$item"); fi
+    done
+    _arr=()
+    if [[ ${#result[@]} -gt 0 ]]; then _arr=("${result[@]}"); fi
+  }
+
+  _dedup_simple    APT_PACKAGES
+  _dedup_simple    SNAP_PACKAGES
+  _dedup_simple    FLATPAK_PACKAGES
+  _dedup_paired    DEB_PACKAGES
+  _dedup_paired    CUSTOM_PACKAGES
 }
 
 # ---------------------------------------------------------------------------
@@ -179,18 +219,24 @@ main() {
   chain_str=$(IFS=" → "; echo "${PROFILE_CHAIN[*]}")
   log_info "Profile chain:  ${chain_str}"
 
-  if [[ ${#APT_PACKAGES[@]} -gt 0 ]]; then
-    log_info "Apt packages (${#APT_PACKAGES[@]}): ${APT_PACKAGES[*]}"
-  else
-    log_info "No apt packages declared in this profile chain"
-  fi
+  local _total_pkgs=$(( ${#APT_PACKAGES[@]} + ${#SNAP_PACKAGES[@]} + ${#FLATPAK_PACKAGES[@]} + ${#DEB_PACKAGES[@]} + ${#CUSTOM_PACKAGES[@]} ))
+  [[ ${#APT_PACKAGES[@]} -gt 0 ]]     && log_info "apt      (${#APT_PACKAGES[@]}): ${APT_PACKAGES[*]}"
+  [[ ${#SNAP_PACKAGES[@]} -gt 0 ]]    && log_info "snap     (${#SNAP_PACKAGES[@]}): ${SNAP_PACKAGES[*]}"
+  [[ ${#FLATPAK_PACKAGES[@]} -gt 0 ]] && log_info "flatpak  (${#FLATPAK_PACKAGES[@]}): ${FLATPAK_PACKAGES[*]}"
+  [[ ${#DEB_PACKAGES[@]} -gt 0 ]]     && log_info "deb      (${#DEB_PACKAGES[@]})"
+  [[ ${#CUSTOM_PACKAGES[@]} -gt 0 ]]  && log_info "custom   (${#CUSTOM_PACKAGES[@]})"
+  [[ $_total_pkgs -eq 0 ]]            && log_info "No packages declared in this profile chain"
 
-  # Install packages
+  # Install packages in order: apt → snap → flatpak → deb → custom
   if [[ "$DOTFILES_ONLY" != "true" ]]; then
-    if [[ ${#APT_PACKAGES[@]} -gt 0 ]]; then
-      install_apt_packages "${APT_PACKAGES[@]}"
-    else
+    if [[ $_total_pkgs -eq 0 ]]; then
       log_info "Nothing to install"
+    else
+      [[ ${#APT_PACKAGES[@]} -gt 0 ]]     && install_apt_packages "${APT_PACKAGES[@]}"
+      [[ ${#SNAP_PACKAGES[@]} -gt 0 ]]    && install_snap_packages "${SNAP_PACKAGES[@]}"
+      [[ ${#FLATPAK_PACKAGES[@]} -gt 0 ]] && install_flatpak_packages "${FLATPAK_PACKAGES[@]}"
+      [[ ${#DEB_PACKAGES[@]} -gt 0 ]]     && install_deb_packages "${DEB_PACKAGES[@]}"
+      [[ ${#CUSTOM_PACKAGES[@]} -gt 0 ]]  && install_custom_packages "${CUSTOM_PACKAGES[@]}"
     fi
   else
     log_info "Skipping package installation (--dotfiles-only)"
