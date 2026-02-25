@@ -224,7 +224,7 @@ specifications:
 
   - id: "FEAT-0015"
     file: "specs/features/FEAT-0015-ai-governance-system.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"
