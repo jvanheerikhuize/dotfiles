@@ -211,7 +211,44 @@ Within a provisioning run, types are installed in this order:
 
 ---
 
-## 6. Security Considerations
+## 6. Testing Architecture
+
+### 6.1 Smoke Test Suite (FEAT-0004)
+
+Docker-based smoke tests that provision a clean Ubuntu 22.04 container and assert the result.
+
+```
+tests/smoke/
+├── Dockerfile          # FROM ubuntu:22.04; adds sudo+git+python3; COPYs repo; non-root testuser
+├── run-tests.sh        # Build image; run each scenario; print pass/fail; clean up image
+├── helpers.sh          # assert_cmd_success, assert_cmd_fails, assert_pkg_installed,
+│                       # assert_symlink, assert_git_config, assert_file_exists, finish()
+└── tests/
+    ├── test-help.sh              # --help exits 0
+    ├── test-unknown-profile.sh   # Unknown --profile exits non-zero
+    ├── test-base-apt.sh          # All base.yaml apt packages installed
+    ├── test-base-dotfiles.sh     # Symlinks + git config + aliases + live symlink
+    ├── test-base-bash-login.sh   # bash --login exits 0; bash -n syntax checks
+    └── test-base-idempotency.sh  # Second run exits 0; symlinks still correct
+```
+
+### 6.2 Test Runner Behaviour
+
+| Behaviour | Detail |
+|-----------|--------|
+| Image build | `docker build --no-cache` by default; `--use-cache` flag for development |
+| Scenario isolation | Each scenario runs in a fresh `docker run --rm` container |
+| Profile filter | `--profile <name>` runs only scenarios tagged with that profile |
+| Cleanup | Image removed after all scenarios complete (`docker image rm`) |
+| Exit code | 0 if all pass; 1 if any fail |
+
+### 6.3 CI Integration
+
+`.github/workflows/smoke-tests.yml` triggers on every PR and push to `main`.
+
+---
+
+## 7. Security Considerations
 
 | Concern | Approach |
 |---------|----------|
@@ -276,3 +313,4 @@ See `../decisions/` for ADRs:
 | 1.0.0 | 2026-02-25 | Jerry | Initial architecture for dotfiles provisioning system |
 | 1.1.0 | 2026-02-25 | Jerry | FEAT-0002: deb/custom schema, idempotency table updated |
 | 1.2.0 | 2026-02-25 | Jerry | FEAT-0003: documented actual dotfiles and dotfile conventions |
+| 1.3.0 | 2026-02-25 | Jerry | FEAT-0004: added testing architecture section (Docker smoke tests) |

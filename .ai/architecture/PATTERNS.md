@@ -392,6 +392,7 @@ load_profile() {
 | `rm -rf` without path validation | Destructive accidents | Validate path is in expected scope first |
 | Skipping the idempotency check | Breaks re-runs | Always check state before acting |
 | `echo` for user-visible output | Bypasses log format | Use `log_info` / `log_warn` / `log_step` |
+| `[[ cond ]] \|\| return` in dotfiles | `return` inherits exit code 1 from failed `[[ ]]`; propagates through `.bash_profile`; breaks `bash --login -c exit` | Use `return 0` explicitly |
 
 ---
 
@@ -402,10 +403,10 @@ Rules that apply to all files in `dotfiles/`:
 **Non-interactive guard in `.bashrc`** — First real logic must return early for non-interactive shells:
 
 ```bash
-[[ $- == *i* ]] || return
+[[ $- == *i* ]] || return 0
 ```
 
-This prevents `.bashrc` from breaking scripts that accidentally source it.
+**Always use `return 0`, not bare `return`.** Without the explicit `0`, `return` inherits the exit code of the failed `[[ ]]` test (exit code 1). That 1 propagates through `.bash_profile` (via `source ~/.bashrc`) and causes `bash --login -c exit` to exit 1, because `exit` with no argument uses `$?` from the last startup file. This is a subtle but real bug that breaks CI smoke tests.
 
 **No user identity in `.gitconfig`** — `user.name` and `user.email` are machine-specific and set by FEAT-0008. The repo `.gitconfig` must never include them.
 
@@ -421,9 +422,52 @@ fi
 
 ---
 
-## 14. Revision History
+## 14. Smoke Test Pattern
+
+Test scripts live in `tests/smoke/tests/`. Each script:
+1. Sources `../helpers.sh`
+2. Runs `install.sh` with appropriate flags (full, `--skip-dotfiles`, or `--dotfiles-only`)
+3. Calls `assert_*` helpers for each condition
+4. Calls `finish` to print summary and exit
+
+```bash
+#!/usr/bin/env bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+source "${SCRIPT_DIR}/../helpers.sh"
+
+# Provision (--force replaces /etc/skel skeleton files created by useradd -m)
+bash "${REPO_ROOT}/install.sh" --profile base --dotfiles-only --force
+
+# Assert
+assert_symlink "${HOME}/.bashrc" "${REPO_ROOT}/dotfiles/.bashrc"
+assert_git_config "core.editor" "vim"
+assert_cmd_success "bash --login exits 0" bash --login -c exit
+
+finish   # prints summary; exits 0 or 1
+```
+
+Available assertions (all defined in `tests/smoke/helpers.sh`):
+
+| Helper | What it checks |
+|--------|---------------|
+| `assert_cmd_success <desc> <cmd...>` | Command exits 0 |
+| `assert_cmd_fails <desc> <cmd...>` | Command exits non-zero |
+| `assert_pkg_installed <pkg>` | `dpkg -s <pkg>` exits 0 |
+| `assert_file_exists <path>` | `test -e <path>` |
+| `assert_symlink <link> <target>` | `readlink <link>` == `<target>` |
+| `assert_git_config <key> <value>` | `git config --global <key>` == `<value>` |
+
+---
+
+## 15. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-02-25 | Jerry | Initial bash patterns for dotfiles provisioning |
 | 1.1.0 | 2026-02-25 | Jerry | FEAT-0003: added dotfile conventions section |
+| 1.2.0 | 2026-02-25 | Jerry | FEAT-0004: added smoke test pattern section |
+| 1.3.0 | 2026-02-25 | Jerry | Bug fixes: document return 0 guard and --force requirement in smoke tests |
