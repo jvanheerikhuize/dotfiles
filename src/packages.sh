@@ -19,7 +19,16 @@ install_apt_package() {
   local pkg="$1"
 
   if dpkg -s "$pkg" &>/dev/null 2>&1; then
-    log_info "Already installed: ${pkg}"
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already installed: ${pkg} (skip)"
+    else
+      log_info "Already installed: ${pkg}"
+    fi
+    return 0
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would install (apt): ${pkg}"
     return 0
   fi
 
@@ -41,8 +50,10 @@ install_apt_packages() {
 
   log_step "Installing apt packages (${#packages[@]} total)"
 
-  log_info "Running apt-get update..."
-  sudo apt-get update -qq
+  if [[ "${DRY_RUN:-false}" != "true" ]]; then
+    log_info "Running apt-get update..."
+    sudo apt-get update -qq
+  fi
 
   for pkg in "${packages[@]}"; do
     install_apt_package "$pkg"
@@ -59,7 +70,16 @@ install_snap_package() {
   local pkg="$1"
 
   if snap list "$pkg" &>/dev/null 2>&1; then
-    log_info "Already installed (snap): ${pkg}"
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already installed (snap): ${pkg} (skip)"
+    else
+      log_info "Already installed (snap): ${pkg}"
+    fi
+    return 0
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would install (snap): ${pkg}"
     return 0
   fi
 
@@ -92,11 +112,19 @@ install_snap_packages() {
 # Installs flatpak via apt and adds the flathub remote if not already present.
 _ensure_flatpak() {
   if ! command -v flatpak &>/dev/null; then
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Would install flatpak via apt"
+      return 0
+    fi
     log_info "flatpak not found — installing via apt"
     sudo apt-get install -y flatpak
   fi
 
   if ! flatpak remotes 2>/dev/null | grep -q flathub; then
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Would add flathub remote"
+      return 0
+    fi
     log_info "Adding flathub remote"
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
   fi
@@ -107,8 +135,17 @@ _ensure_flatpak() {
 install_flatpak_package() {
   local id="$1"
 
-  if flatpak info "$id" &>/dev/null 2>&1; then
-    log_info "Already installed (flatpak): ${id}"
+  if command -v flatpak &>/dev/null && flatpak info "$id" &>/dev/null 2>&1; then
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already installed (flatpak): ${id} (skip)"
+    else
+      log_info "Already installed (flatpak): ${id}"
+    fi
+    return 0
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would install (flatpak): ${id}"
     return 0
   fi
 
@@ -152,7 +189,16 @@ install_deb_package() {
   fi
 
   if dpkg -s "$name" &>/dev/null 2>&1; then
-    log_info "Already installed (deb): ${name}"
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already installed (deb): ${name} (skip)"
+    else
+      log_info "Already installed (deb): ${name}"
+    fi
+    return 0
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would install (deb): ${name} from ${url}"
     return 0
   fi
 
@@ -200,9 +246,18 @@ install_custom_package() {
 
   if [[ -n "$check" ]]; then
     if bash -c "$check" &>/dev/null 2>&1; then
-      log_info "Already satisfied (custom): ${cmd}"
+      if [[ "${DRY_RUN:-false}" == "true" ]]; then
+        log_dry_run "Already satisfied (custom): ${cmd} (skip)"
+      else
+        log_info "Already satisfied (custom): ${cmd}"
+      fi
       return 0
     fi
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would run (custom): ${cmd}"
+    return 0
   fi
 
   log_info "Running (custom): ${cmd}"

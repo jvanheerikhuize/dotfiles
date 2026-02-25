@@ -6,7 +6,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0.0 |
+| Version | 1.4.0 |
 | Last Updated | 2026-02-25 |
 
 ---
@@ -58,10 +58,11 @@ All output goes through helpers in `src/utils.sh`. Never use bare `echo`.
 
 ```bash
 # utils.sh defines these:
-log_info()  { echo "[INFO]  $(date '+%H:%M:%S') $*"; }
-log_warn()  { echo "[WARN]  $(date '+%H:%M:%S') $*" >&2; }
-log_error() { echo "[ERROR] $(date '+%H:%M:%S') $*" >&2; exit 1; }
-log_step()  { echo ""; echo "==> $*"; }   # section header
+log_info()    { echo "[INFO]  $(date '+%H:%M:%S') $*"; }
+log_warn()    { echo "[WARN]  $(date '+%H:%M:%S') $*" >&2; }
+log_error()   { echo "[ERROR] $(date '+%H:%M:%S') $*" >&2; exit 1; }
+log_step()    { echo ""; echo "==> $*"; }   # section header
+log_dry_run() { echo "[DRY RUN] $(date '+%H:%M:%S') $*"; }  # FEAT-0005
 ```
 
 Usage:
@@ -71,6 +72,7 @@ log_step "Installing apt packages"
 log_info "Installing: curl"
 log_warn "Package vim already installed, skipping"
 log_error "apt-get failed for package: curl"   # exits 1
+log_dry_run "Would install (apt): curl"         # dry-run preview, no-op
 ```
 
 ---
@@ -111,6 +113,7 @@ PROFILE="base"
 SKIP_DOTFILES=false
 DOTFILES_ONLY=false
 FORCE=false
+DRY_RUN=false
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
@@ -129,6 +132,10 @@ parse_args() {
         ;;
       --force)
         FORCE=true
+        shift
+        ;;
+      --dry-run)
+        DRY_RUN=true
         shift
         ;;
       --help)
@@ -151,6 +158,7 @@ Options:
   --skip-dotfiles      Install packages only
   --dotfiles-only      Apply dotfiles only
   --force              Replace existing dotfiles (backs up to .bak)
+  --dry-run            Preview what would be installed/linked; make no changes
   --help               Show this help
 EOF
 }
@@ -463,7 +471,64 @@ Available assertions (all defined in `tests/smoke/helpers.sh`):
 
 ---
 
-## 15. Revision History
+## 15. Dry-Run Pattern (FEAT-0005)
+
+The `DRY_RUN` global variable gates all mutating operations. No separate dry-run functions — the same install and link functions check `DRY_RUN` before executing side effects.
+
+```bash
+# In a package install function
+install_apt_package() {
+  local pkg="$1"
+
+  if dpkg -s "$pkg" &>/dev/null 2>&1; then
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already installed: ${pkg} (skip)"
+    else
+      log_info "Already installed: ${pkg}"
+    fi
+    return 0
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would install (apt): ${pkg}"
+    return 0
+  fi
+
+  log_info "Installing (apt): ${pkg}"
+  sudo apt-get install -y "$pkg"
+}
+
+# In the symlink function
+link_dotfile() {
+  local src="$1" dest="$2" force="$3"
+
+  if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already linked correctly: ${dest} (skip)"
+    else
+      log_info "Already linked: ${dest}"
+    fi
+    return 0
+  fi
+
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would link: ${dest} → ${src}"
+    return 0
+  fi
+
+  ln -sf "$src" "$dest"
+  log_info "Linked: ${dest} → ${src}"
+}
+```
+
+**Rules:**
+- `DRY_RUN` is a global variable in `install.sh`; sourced scripts (`packages.sh`, `dotfiles.sh`) reference it via `${DRY_RUN:-false}` (defaults to false when not set, e.g. standalone sourcing)
+- Read-only operations (idempotency checks like `dpkg -s`) still execute in dry-run mode — only writes are skipped
+- All `log_dry_run` output uses the `[DRY RUN]` prefix from `src/utils.sh`
+
+---
+
+## 16. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -471,3 +536,4 @@ Available assertions (all defined in `tests/smoke/helpers.sh`):
 | 1.1.0 | 2026-02-25 | Jerry | FEAT-0003: added dotfile conventions section |
 | 1.2.0 | 2026-02-25 | Jerry | FEAT-0004: added smoke test pattern section |
 | 1.3.0 | 2026-02-25 | Jerry | Bug fixes: document return 0 guard and --force requirement in smoke tests |
+| 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run to logging section; --dry-run to arg parsing; DRY_RUN pattern section |

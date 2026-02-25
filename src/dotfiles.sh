@@ -27,19 +27,36 @@ link_dotfile() {
 
   # Already correctly linked — nothing to do
   if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
-    log_info "Already linked: ${dest}"
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Already linked correctly: ${dest} (skip)"
+    else
+      log_info "Already linked: ${dest}"
+    fi
     return 0
   fi
 
   # Destination exists (file, directory, or wrong symlink)
   if [[ -e "$dest" ]] || [[ -L "$dest" ]]; then
     if [[ "$force" != "true" ]]; then
-      log_warn "Skipping: ${dest} — already exists (use --force to replace)"
+      if [[ "${DRY_RUN:-false}" == "true" ]]; then
+        log_dry_run "Would skip: ${dest} — file exists (use --force to replace)"
+      else
+        log_warn "Skipping: ${dest} — already exists (use --force to replace)"
+      fi
+      return 0
+    fi
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Would link: ${dest} → ${src} (replacing existing with backup)"
       return 0
     fi
     # --force: back up then replace
     mv "$dest" "${dest}.bak"
     log_info "Backed up: ${dest} → ${dest}.bak"
+  else
+    if [[ "${DRY_RUN:-false}" == "true" ]]; then
+      log_dry_run "Would link: ${dest} → ${src}"
+      return 0
+    fi
   fi
 
   # Create parent directory if it doesn't exist

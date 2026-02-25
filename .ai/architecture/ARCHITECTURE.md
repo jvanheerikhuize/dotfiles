@@ -63,12 +63,13 @@
 ```
 install.sh (entrypoint)
 │
-├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --help)
+├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --help)
 │
 ├── src/utils.sh
 │   ├── log_info()      print timestamped info line
 │   ├── log_warn()      print warning (does not exit)
 │   ├── log_error()     print error and exit 1
+│   ├── log_dry_run()   print [DRY RUN] preview line (FEAT-0005)
 │   └── require_cmd()   assert a command exists or exit
 │
 ├── profile loader
@@ -229,7 +230,8 @@ tests/smoke/
     ├── test-base-apt.sh          # All base.yaml apt packages installed
     ├── test-base-dotfiles.sh     # Symlinks + git config + aliases + live symlink
     ├── test-base-bash-login.sh   # bash --login exits 0; bash -n syntax checks
-    └── test-base-idempotency.sh  # Second run exits 0; symlinks still correct
+    ├── test-base-idempotency.sh  # Second run exits 0; symlinks still correct
+    └── test-base-dry-run.sh      # --dry-run: no packages installed, no symlinks created
 ```
 
 ### 6.2 Test Runner Behaviour
@@ -314,3 +316,4 @@ See `../decisions/` for ADRs:
 | 1.1.0 | 2026-02-25 | Jerry | FEAT-0002: deb/custom schema, idempotency table updated |
 | 1.2.0 | 2026-02-25 | Jerry | FEAT-0003: documented actual dotfiles and dotfile conventions |
 | 1.3.0 | 2026-02-25 | Jerry | FEAT-0004: added testing architecture section (Docker smoke tests) |
+| 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run() to utils diagram; --dry-run to arg list; dry-run test to smoke suite |

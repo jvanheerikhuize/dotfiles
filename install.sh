@@ -18,6 +18,7 @@ PROFILE="base"
 SKIP_DOTFILES=false
 DOTFILES_ONLY=false
 FORCE=false
+DRY_RUN=false
 
 # Global arrays populated by load_profile()
 APT_PACKAGES=()
@@ -41,15 +42,17 @@ Options:
   --skip-dotfiles      Install packages only; skip dotfile symlinking
   --dotfiles-only      Apply dotfiles only; skip package installation
   --force              Replace existing dotfiles (backs up originals to .bak)
+  --dry-run            Preview what would be installed/linked; make no changes
   --help               Show this help and exit
 
 Profiles available: $(ls "${PROFILES_DIR}"/*.yaml 2>/dev/null | xargs -I{} basename {} .yaml | tr '\n' ' ')
 
 Examples:
-  ./install.sh                        # Apply base profile
-  ./install.sh --profile dev          # Apply dev profile (includes base + desktop)
-  ./install.sh --profile base --force # Apply base, replace conflicting dotfiles
-  ./install.sh --dotfiles-only        # Only symlink dotfiles, skip packages
+  ./install.sh                             # Apply base profile
+  ./install.sh --profile dev               # Apply dev profile (includes base + desktop)
+  ./install.sh --profile base --force      # Apply base, replace conflicting dotfiles
+  ./install.sh --dotfiles-only             # Only symlink dotfiles, skip packages
+  ./install.sh --profile dev --dry-run     # Preview what dev profile would do
 
 EOF
 }
@@ -75,6 +78,10 @@ parse_args() {
         ;;
       --force)
         FORCE=true
+        shift
+        ;;
+      --dry-run)
+        DRY_RUN=true
         shift
         ;;
       --help|-h)
@@ -209,6 +216,7 @@ main() {
   [[ "$FORCE" == "true" ]]         && log_info "Mode:     --force (will replace existing dotfiles)"
   [[ "$SKIP_DOTFILES" == "true" ]] && log_info "Mode:     --skip-dotfiles"
   [[ "$DOTFILES_ONLY" == "true" ]] && log_info "Mode:     --dotfiles-only"
+  [[ "$DRY_RUN" == "true" ]]       && log_info "Mode:     --dry-run (no changes will be made)"
 
   # Load and merge profile chain
   log_step "Loading profile"
