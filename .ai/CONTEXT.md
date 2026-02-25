@@ -51,10 +51,11 @@
 ### Active Work
 - [x] FEAT-0001: Core provisioning engine (install.sh + YAML manifest + apt + profile system)
 - [x] FEAT-0002: Multi-type package support (snap, flatpak, deb, custom)
-- [ ] FEAT-0003 through FEAT-0014: Pending (see specs.config.yaml)
+- [x] FEAT-0003: Base shell dotfiles (.bashrc, .bash_aliases, .bash_profile, .gitconfig)
+- [ ] FEAT-0004 through FEAT-0014: Pending (see specs.config.yaml)
 
 ### Recent Changes
-- 2026-02-25: Repository initialized; FEAT-0001 and FEAT-0002 implemented
+- 2026-02-25: Repository initialized; FEAT-0001, FEAT-0002, and FEAT-0003 implemented
 
 ### Known Issues
 - None
@@ -112,8 +113,11 @@ dotfiles/
 │   ├── desktop.yaml           # Desktop profile
 │   ├── server.yaml            # Server profile
 │   └── dev.yaml               # Developer profile
-├── dotfiles/                   # Actual config files to symlink
-│   └── ...
+├── dotfiles/                   # Actual config files symlinked into $HOME
+│   ├── .bashrc                # Prompt, history, colour, sources .bash_aliases
+│   ├── .bash_aliases          # ll, la, grep, git shortcuts, navigation
+│   ├── .bash_profile          # Login shell; sources .bashrc
+│   └── .gitconfig             # Core git settings and aliases (no identity)
 └── src/                        # Package type install helpers
     ├── packages.sh            # Package install dispatcher
     ├── dotfiles.sh            # Symlink management

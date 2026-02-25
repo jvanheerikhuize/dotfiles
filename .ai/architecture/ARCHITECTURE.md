@@ -155,9 +155,10 @@ packages:
 All files in `dotfiles/` are symlinked into `$HOME` with the same filename:
 
 ```
-<repo>/dotfiles/.bashrc     →  ~/.bashrc
-<repo>/dotfiles/.gitconfig  →  ~/.gitconfig
-<repo>/dotfiles/.vimrc      →  ~/.vimrc
+<repo>/dotfiles/.bashrc        →  ~/.bashrc
+<repo>/dotfiles/.bash_aliases  →  ~/.bash_aliases
+<repo>/dotfiles/.bash_profile  →  ~/.bash_profile
+<repo>/dotfiles/.gitconfig     →  ~/.gitconfig
 ```
 
 Subdirectories are mirrored:
@@ -165,6 +166,15 @@ Subdirectories are mirrored:
 ```
 <repo>/dotfiles/.config/nvim/  →  ~/.config/nvim/
 ```
+
+### 4.3 Dotfile Conventions
+
+| Rule | Detail |
+|------|--------|
+| Non-interactive guard | `.bashrc` returns early if `[[ $- != *i* ]]` — safe to source from scripts |
+| No user identity in git | `.gitconfig` omits `user.name` / `user.email` — set per-machine by FEAT-0008 |
+| No tool assumptions | Files only use tools present on stock Ubuntu 22.04 |
+| Self-documenting | Each file is commented to explain every non-obvious setting |
 
 ### 4.2 Collision Handling
 
@@ -265,3 +275,4 @@ See `../decisions/` for ADRs:
 |---------|------|--------|---------|
 | 1.0.0 | 2026-02-25 | Jerry | Initial architecture for dotfiles provisioning system |
 | 1.1.0 | 2026-02-25 | Jerry | FEAT-0002: deb/custom schema, idempotency table updated |
+| 1.2.0 | 2026-02-25 | Jerry | FEAT-0003: documented actual dotfiles and dotfile conventions |
