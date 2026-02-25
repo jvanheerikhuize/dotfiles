@@ -1,0 +1,124 @@
+# Feature Specification: SSH Key Setup
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0009"
+  title: "SSH Key Setup"
+  version: "1.0.0"
+  status: "draft"
+  priority: "medium"
+  author: "Jerry"
+  created_at: "2026-02-25"
+  updated_at: "2026-02-25"
+  tags:
+    - ssh
+    - security
+    - bootstrap
+    - identity
+
+description:
+  summary: |
+    Generate an ed25519 SSH keypair and configure ~/.ssh/config if none exists,
+    then print the public key so it can be added to GitHub/servers.
+
+  problem_statement: |
+    After provisioning, a developer cannot authenticate to GitHub or remote servers
+    until they manually generate an SSH key, set permissions, configure ~/.ssh/config,
+    and add the public key to their accounts. This is always the same sequence of steps
+    and should be automated.
+
+  proposed_solution: |
+    A scripts/setup-ssh.sh script, called by install.sh after packages are installed.
+    It:
+    1. Checks if ~/.ssh/id_ed25519 already exists — if so, skips generation
+    2. Creates ~/.ssh/ with mode 700 if it doesn't exist
+    3. Generates ~/.ssh/id_ed25519 with ssh-keygen -t ed25519 -C "<git_email_or_hostname>"
+    4. Sets permissions: 600 on private key, 644 on public key
+    5. Writes a minimal ~/.ssh/config if it doesn't exist (AddKeysToAgent, IdentityFile)
+    6. Prints the public key prominently with instructions to add it to GitHub/GitLab
+
+  out_of_scope:
+    - "Automatically uploading the public key to GitHub/GitLab via API"
+    - "Multiple SSH keys for different identities"
+    - "SSH agent auto-start in the shell (covered in FEAT-0003 .bashrc)"
+    - "Server-side authorized_keys management"
+
+  dependencies:
+    - "FEAT-0001: Core provisioning engine"
+    - "FEAT-0008: Git identity bootstrap (email used as SSH key comment, optional)"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "~/.ssh/id_ed25519 does not exist"
+    when: "install.sh is run (or scripts/setup-ssh.sh is run standalone)"
+    then: "An ed25519 keypair is generated at ~/.ssh/id_ed25519 and ~/.ssh/id_ed25519.pub"
+    and:
+      - "~/.ssh/ permissions are 700"
+      - "~/.ssh/id_ed25519 permissions are 600"
+      - "~/.ssh/id_ed25519.pub permissions are 644"
+      - "The key comment is set to '<user>@<hostname>'"
+
+  - id: "AC-002"
+    given: "~/.ssh/id_ed25519 already exists"
+    when: "install.sh is run"
+    then: "Key generation is skipped with log_info: 'SSH key already exists: ~/.ssh/id_ed25519'"
+
+  - id: "AC-003"
+    given: "~/.ssh/config does not exist"
+    when: "SSH key setup runs"
+    then: "A minimal ~/.ssh/config is written with:"
+    and:
+      - "Host * AddKeysToAgent yes"
+      - "Host * IdentityFile ~/.ssh/id_ed25519"
+      - "Permissions set to 600"
+
+  - id: "AC-004"
+    given: "~/.ssh/config already exists"
+    when: "SSH key setup runs"
+    then: "The existing ~/.ssh/config is left untouched (log_info: 'SSH config already exists, skipping')"
+
+  - id: "AC-005"
+    given: "After key generation"
+    when: "install.sh or setup-ssh.sh completes"
+    then: "The public key is printed to stdout with a clear header:"
+    and:
+      - "Header: '==> Your SSH public key (add this to GitHub/GitLab):'"
+      - "The full contents of ~/.ssh/id_ed25519.pub are printed"
+      - "A follow-up line: 'GitHub: https://github.com/settings/ssh/new'"
+
+  - id: "AC-006"
+    given: "install.sh is run with --non-interactive"
+    when: "SSH key does not exist"
+    then: "Key generation still runs non-interactively (ssh-keygen -N '' for no passphrase)"
+    and:
+      - "A log_warn is printed: 'SSH key generated without passphrase (non-interactive mode)'"
+
+technical_requirements:
+  constraints:
+    - "Key type is always ed25519 — no RSA, no DSA"
+    - "No passphrase by default in non-interactive mode; interactive mode prompts for optional passphrase"
+    - "setup-ssh.sh must be runnable standalone without install.sh"
+
+  security:
+    - "Private key permissions enforced to 600 — script exits if chmod fails"
+    - "~/.ssh/ directory permissions enforced to 700"
+    - "No passphrase required but recommended — instructions printed"
+
+testing_requirements:
+  unit_tests: false
+  integration_tests: true
+  e2e_tests: true
+  test_scenarios:
+    - "No existing key: keypair generated with correct permissions"
+    - "Existing key: generation skipped, existing key untouched"
+    - "No existing ~/.ssh/config: config written with correct contents and permissions"
+    - "Existing ~/.ssh/config: left untouched"
+    - "Public key printed to stdout after generation"
+    - "Standalone scripts/setup-ssh.sh works without install.sh"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    Remove generated files: rm -f ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
+    If ~/.ssh/config was created by this script, remove it too.
+    Private key is only on this machine — remove from GitHub/GitLab separately.

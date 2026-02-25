@@ -1,0 +1,110 @@
+# Feature Specification: Git Identity Bootstrap
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0008"
+  title: "Git Identity Bootstrap"
+  version: "1.0.0"
+  status: "draft"
+  priority: "high"
+  author: "Jerry"
+  created_at: "2026-02-25"
+  updated_at: "2026-02-25"
+  tags:
+    - git
+    - identity
+    - configuration
+    - bootstrap
+
+description:
+  summary: |
+    After dotfiles are linked, prompt the user to set their git user.name and
+    user.email if not already configured, and write them to a local gitconfig
+    include that is not tracked in the repo.
+
+  problem_statement: |
+    .gitconfig (from FEAT-0003) cannot contain user.name or user.email because
+    those values are personal and different per user/machine. After provisioning,
+    git commits fail with "Author identity unknown" until the user manually runs
+    git config --global user.name/email. This is a common post-provisioning
+    manual step that should be automated.
+
+  proposed_solution: |
+    Create a scripts/setup-git-identity.sh script, called by install.sh after
+    dotfiles are linked. It:
+    1. Checks if git user.name and user.email are already set (via git config --global)
+    2. If not, prompts interactively for name and email
+    3. Writes them to ~/.gitconfig.local (a file NOT in the repo and NOT symlinked)
+    4. The repo's dotfiles/.gitconfig includes ~/.gitconfig.local via [include] path
+    Running with --non-interactive skips the prompts and emits a log_warn instead.
+
+  out_of_scope:
+    - "GPG signing key setup (separate spec)"
+    - "Multiple git identities / per-repo overrides"
+    - "GitHub/GitLab credential helpers"
+
+  dependencies:
+    - "FEAT-0001: Core provisioning engine"
+    - "FEAT-0003: Base shell dotfiles (.gitconfig must contain [include] path = ~/.gitconfig.local)"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "git user.name and user.email are not set after dotfiles are linked"
+    when: "install.sh completes (interactive session)"
+    then: "The user is prompted: 'Enter your git name:' and 'Enter your git email:'"
+    and:
+      - "Responses are written to ~/.gitconfig.local as [user] name = ... and email = ..."
+      - "'git config --global user.name' returns the entered value"
+      - "'git config --global user.email' returns the entered value"
+
+  - id: "AC-002"
+    given: "git user.name and user.email are already set (e.g. second run)"
+    when: "install.sh is run"
+    then: "The prompt is skipped and a log_info is printed: 'Git identity already configured'"
+
+  - id: "AC-003"
+    given: "install.sh is run with --non-interactive"
+    when: "git identity is not yet set"
+    then: "The prompt is skipped with log_warn: 'Git identity not configured — run scripts/setup-git-identity.sh manually'"
+
+  - id: "AC-004"
+    given: "~/.gitconfig.local already exists with correct values"
+    when: "install.sh is run again"
+    then: "The file is left untouched (idempotent)"
+
+  - id: "AC-005"
+    given: "dotfiles/.gitconfig"
+    when: "The file is examined"
+    then: "It contains '[include] path = ~/.gitconfig.local' so local identity is picked up automatically"
+
+  - id: "AC-006"
+    given: "scripts/setup-git-identity.sh"
+    when: "Run standalone"
+    then: "It prompts for name/email and writes ~/.gitconfig.local, independent of install.sh"
+
+technical_requirements:
+  constraints:
+    - "~/.gitconfig.local must NOT be in the repo and must NOT be symlinked"
+    - "The [include] directive in .gitconfig is silently ignored by git if the file doesn't exist — no errors on fresh install before setup"
+    - "Input validation: email must match basic format (contains @ and .)"
+
+  security:
+    - "~/.gitconfig.local contains only name and email — no tokens or passwords"
+
+testing_requirements:
+  unit_tests: false
+  integration_tests: true
+  e2e_tests: true
+  test_scenarios:
+    - "No prior git config: prompt shown, values written to ~/.gitconfig.local"
+    - "git config user.name returns entered value after setup"
+    - "Re-run: prompt skipped, existing values preserved"
+    - "--non-interactive: warning shown, ~/.gitconfig.local not created"
+    - "Invalid email format: re-prompted"
+    - "Standalone scripts/setup-git-identity.sh works without running full install.sh"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    Remove ~/.gitconfig.local to clear the configured identity.
+    The [include] in .gitconfig silently ignores a missing file.

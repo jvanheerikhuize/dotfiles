@@ -1,0 +1,101 @@
+# Feature Specification: Dry Run Mode
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0005"
+  title: "Dry Run Mode"
+  version: "1.0.0"
+  status: "draft"
+  priority: "high"
+  author: "Jerry"
+  created_at: "2026-02-25"
+  updated_at: "2026-02-25"
+  tags:
+    - ux
+    - safety
+    - dry-run
+
+description:
+  summary: |
+    Add a --dry-run flag to install.sh that prints exactly what would be installed
+    and linked without making any changes to the system.
+
+  problem_statement: |
+    Before running install.sh on a machine, there is no way to preview what it will
+    do — which packages will be installed, which dotfiles will be linked or skipped,
+    and whether any conflicts exist. This makes it hard to review a profile before
+    applying it and increases the risk of surprises on production machines.
+
+  proposed_solution: |
+    When --dry-run is passed, install.sh executes the full resolution logic (load
+    profile, merge extends chain, enumerate package lists, enumerate dotfiles) but
+    replaces every mutating operation with a [DRY RUN] log line describing what
+    would happen. No apt, snap, flatpak, dpkg, ln, or mv commands are executed.
+    The output format mirrors a real run so it can be diffed against one.
+
+  out_of_scope:
+    - "Checking whether individual packages are available in apt/snap/flatpak registries"
+    - "Estimating download sizes"
+
+  dependencies:
+    - "FEAT-0001: Core provisioning engine"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "Any valid profile"
+    when: "./install.sh --profile base --dry-run is run"
+    then: "No packages are installed and no files are created or modified"
+    and:
+      - "dpkg -s for each listed package is checked (read-only) to determine installed status"
+      - "Each symlink target in $HOME is checked (read-only)"
+      - "Exit code is 0"
+
+  - id: "AC-002"
+    given: "A profile that includes packages not yet installed"
+    when: "./install.sh --dry-run is run"
+    then: "Each uninstalled package is printed as '[DRY RUN] Would install (apt): curl'"
+    and:
+      - "Already-installed packages are printed as '[DRY RUN] Already installed: git (skip)'"
+
+  - id: "AC-003"
+    given: "A dotfiles/ directory with files"
+    when: "./install.sh --dry-run is run"
+    then: "Each dotfile action is printed without executing:"
+    and:
+      - "'[DRY RUN] Would link: ~/.bashrc → <repo>/dotfiles/.bashrc' for missing targets"
+      - "'[DRY RUN] Already linked correctly: ~/.bashrc (skip)' for correct symlinks"
+      - "'[DRY RUN] Would skip: ~/.gitconfig — file exists (use --force to replace)' for conflicts"
+
+  - id: "AC-004"
+    given: "A profile with extends inheritance"
+    when: "./install.sh --profile dev --dry-run is run"
+    then: "The full merged package list (base + desktop + dev) is shown"
+    and:
+      - "A header line shows the resolved profile chain: 'Profile: dev (extends: desktop → base)'"
+
+  - id: "AC-005"
+    given: "The --dry-run flag"
+    when: "Combined with --skip-dotfiles or --dotfiles-only"
+    then: "Only the relevant section is shown in dry-run output"
+
+technical_requirements:
+  constraints:
+    - "Dry run must use the same code paths as a real run — achieved by a DRY_RUN=true variable that gates all mutating calls"
+    - "No separate dry-run-specific functions; the same install functions check DRY_RUN before executing"
+
+testing_requirements:
+  unit_tests: true
+  integration_tests: false
+  e2e_tests: true
+  test_scenarios:
+    - "After --dry-run, dpkg -l shows no new packages installed"
+    - "After --dry-run, $HOME contains no new symlinks"
+    - "Output contains '[DRY RUN]' prefix on all action lines"
+    - "Output contains 'Already installed' for packages already present"
+    - "Profile chain is shown correctly for an extended profile"
+    - "--dry-run exits 0 even when conflicts exist"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    Dry run makes no changes. No rollback needed.

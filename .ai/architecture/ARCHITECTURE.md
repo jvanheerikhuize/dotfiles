@@ -7,346 +7,258 @@
 | Field | Value |
 |-------|-------|
 | Version | 1.0.0 |
-| Status | Draft |
-| Last Updated | YYYY-MM-DD |
-| Owner | [Team/Person] |
+| Status | Active |
+| Last Updated | 2026-02-25 |
+| Owner | Jerry |
 
 ---
 
 ## 1. Architecture Overview
 
 ### 1.1 System Context
-<!-- Highest level view: the system and its environment -->
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     External Systems                         │
-├─────────────────────────────────────────────────────────────┤
-│  [Identity Provider]    [Payment Service]    [Email Service] │
-└──────────┬─────────────────────┬─────────────────┬──────────┘
-           │                     │                 │
-           ▼                     ▼                 ▼
+│                     STAGE 1                                  │
+│  Autoinstall.yaml  →  Fresh Ubuntu 22.04 install            │
+│  (base OS, users, partitions, minimal packages)              │
+└────────────────────────────┬────────────────────────────────┘
+                             │  git clone + ./install.sh
+                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    [SYSTEM NAME]                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Web App   │  │   API       │  │   Workers   │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│                          │                                   │
-│                    ┌─────┴─────┐                            │
-│                    │ Database  │                            │
-│                    └───────────┘                            │
-└─────────────────────────────────────────────────────────────┘
-           ▲                     ▲                 ▲
-           │                     │                 │
-┌──────────┴─────────────────────┴─────────────────┴──────────┐
-│  [Web Users]           [Mobile Users]        [API Clients]   │
+│                     STAGE 2 (this repo)                      │
+│                                                              │
+│   install.sh                                                 │
+│   ├── profiles/<name>.yaml   (what to install)              │
+│   ├── scripts/packages.sh    (how to install packages)      │
+│   └── scripts/dotfiles.sh    (how to link dotfiles)         │
+│                                                              │
+│   Package managers: apt, snap, flatpak, deb, custom         │
+│   Dotfiles: symlinks from dotfiles/ → $HOME                 │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Fully Configured Ubuntu Machine                 │
+│  tools installed · dotfiles linked · ready to use           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 1.2 Architecture Style
-<!-- What architectural pattern(s) does this system follow? -->
 
 | Aspect | Choice | Rationale |
 |--------|--------|-----------|
-| Overall Style | [Monolith / Microservices / Serverless / Hybrid] | [Why] |
-| API Style | [REST / GraphQL / gRPC] | [Why] |
-| Data Architecture | [Single DB / Polyglot / Event Sourced] | [Why] |
-| Deployment | [Containers / Serverless / VMs] | [Why] |
+| Language | Bash | Zero dependencies; present on every Ubuntu install |
+| Config format | YAML | Human-readable, AI-readable, well-structured |
+| YAML parsing | python3 inline | python3 is on Ubuntu 22.04 by default; no bootstrap needed |
+| Execution model | Single entrypoint script | Simple to invoke; no make, no ansible, no runtime |
+| State management | None (idempotent ops) | apt/snap/flatpak are naturally idempotent; symlinks checked before creation |
 
 ---
 
 ## 2. Component Architecture
 
 ### 2.1 Component Diagram
-<!-- Main components and their relationships -->
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Presentation Layer                      │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Web UI     │  │  Mobile App │  │  Admin UI   │         │
-│  │  (React)    │  │  (Native)   │  │  (React)    │         │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
-└─────────┼────────────────┼────────────────┼─────────────────┘
-          │                │                │
-          ▼                ▼                ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       API Gateway                            │
-│  [Authentication] [Rate Limiting] [Routing] [Logging]       │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│  User Service   │ │  Core Service   │ │ Notification    │
-│                 │ │                 │ │    Service      │
-│ - Auth          │ │ - Business      │ │ - Email         │
-│ - Profile       │ │   Logic         │ │ - Push          │
-│ - Preferences   │ │ - Workflows     │ │ - SMS           │
-└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
-         │                   │                   │
-         ▼                   ▼                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       Data Layer                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  PostgreSQL │  │   Redis     │  │  S3/Blob    │         │
-│  │  (Primary)  │  │  (Cache)    │  │  (Files)    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-└─────────────────────────────────────────────────────────────┘
+install.sh (entrypoint)
+│
+├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --help)
+│
+├── scripts/utils.sh
+│   ├── log_info()      print timestamped info line
+│   ├── log_warn()      print warning (does not exit)
+│   ├── log_error()     print error and exit 1
+│   └── require_cmd()   assert a command exists or exit
+│
+├── profile loader
+│   ├── load profiles/<profile>.yaml
+│   ├── resolve extends: chain (recursive merge, base first)
+│   └── emit merged package lists per type
+│
+├── scripts/packages.sh
+│   ├── install_apt()       sudo apt-get install -y <pkg>
+│   ├── install_snap()      sudo snap install <pkg>
+│   ├── install_flatpak()   flatpak install -y <pkg>
+│   ├── install_deb()       wget <url> → sudo dpkg -i
+│   └── install_custom()    eval <script>
+│
+└── scripts/dotfiles.sh
+    ├── link_dotfile()      ln -sf <repo>/dotfiles/<file> $HOME/<file>
+    ├── check_existing()    detect file vs symlink vs missing
+    └── backup_and_link()   mv <file> <file>.bak && ln -sf
 ```
 
 ### 2.2 Component Descriptions
 
-| Component | Purpose | Technology | Owner |
-|-----------|---------|------------|-------|
-| Web UI | User-facing web application | React, TypeScript | Frontend Team |
-| API Gateway | Request routing, auth, rate limiting | [Kong/Nginx/Custom] | Platform Team |
-| User Service | Authentication, authorization, profiles | [Language/Framework] | Backend Team |
-| Core Service | Primary business logic | [Language/Framework] | Backend Team |
-| Notification Service | Multi-channel notifications | [Language/Framework] | Backend Team |
+| Component | File | Purpose |
+|-----------|------|---------|
+| Entrypoint | `install.sh` | Arg parsing, orchestration, profile loading |
+| Utilities | `scripts/utils.sh` | Logging, guards, shared helpers |
+| Package installer | `scripts/packages.sh` | One function per package type |
+| Dotfile manager | `scripts/dotfiles.sh` | Symlink creation, collision handling |
+| Profile manifests | `profiles/*.yaml` | Declarative package lists per profile |
+| Dotfiles | `dotfiles/` | Actual config files to symlink into $HOME |
 
 ---
 
-## 3. Data Architecture
+## 3. Profile System
 
-### 3.1 Data Model Overview
-<!-- Key entities and relationships -->
-
-```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│    User      │───────│   Account    │───────│   Resource   │
-├──────────────┤  1:N  ├──────────────┤  1:N  ├──────────────┤
-│ id           │       │ id           │       │ id           │
-│ email        │       │ user_id      │       │ account_id   │
-│ created_at   │       │ name         │       │ type         │
-└──────────────┘       │ plan         │       │ data         │
-                       └──────────────┘       └──────────────┘
-```
-
-### 3.2 Data Storage Strategy
-
-| Data Type | Storage | Rationale |
-|-----------|---------|-----------|
-| Transactional | PostgreSQL | ACID compliance, complex queries |
-| Cache | Redis | Low latency, session data |
-| Files/Media | S3/Blob | Scalable object storage |
-| Search | Elasticsearch | Full-text search capabilities |
-| Analytics | [ClickHouse/BigQuery] | Time-series, aggregations |
-
-### 3.3 Data Flow
-<!-- How data moves through the system -->
+### 3.1 Inheritance Chain
 
 ```
-[User Input] → [API Gateway] → [Validation] → [Business Logic] → [Database]
-                                                      │
-                                                      ▼
-                                              [Event Published]
-                                                      │
-                                    ┌─────────────────┼─────────────────┐
-                                    ▼                 ▼                 ▼
-                              [Analytics]      [Notifications]    [Webhooks]
+base.yaml
+├── desktop.yaml  (extends: base)
+│   └── dev.yaml  (extends: desktop)
+└── server.yaml   (extends: base)
+```
+
+### 3.2 Merge Semantics
+
+When a profile has `extends: <parent>`, the installer:
+1. Loads the parent profile (recursively, depth-first)
+2. Merges the parent's package lists first
+3. Appends the child's package lists after
+4. Deduplicates within each type
+
+No packages are removed by extending — inheritance is additive only.
+
+### 3.3 Profile YAML Schema
+
+```yaml
+profile:
+  name: base          # string, must match filename
+  extends: null       # null | string (name of parent profile)
+
+packages:
+  apt:
+    - curl
+    - git
+  snap:
+    - []
+  flatpak:
+    - []
+  deb:
+    - []              # URLs to .deb files
+  custom:
+    - []              # Shell commands to run
 ```
 
 ---
 
-## 4. Integration Architecture
+## 4. Dotfile Management
 
-### 4.1 External Integrations
+### 4.1 Symlink Strategy
 
-| System | Purpose | Protocol | Auth | Status |
-|--------|---------|----------|------|--------|
-| [Auth0/Okta] | Identity | OAuth 2.0 | API Key | Active |
-| [Stripe] | Payments | REST | Secret Key | Active |
-| [SendGrid] | Email | REST | API Key | Active |
-| [Twilio] | SMS | REST | API Key | Planned |
+All files in `dotfiles/` are symlinked into `$HOME` with the same filename:
 
-### 4.2 API Contracts
-<!-- Where to find API specifications -->
+```
+<repo>/dotfiles/.bashrc     →  ~/.bashrc
+<repo>/dotfiles/.gitconfig  →  ~/.gitconfig
+<repo>/dotfiles/.vimrc      →  ~/.vimrc
+```
 
-- **Internal APIs**: `specs/api/` (OpenAPI 3.1)
-- **External Webhooks**: `specs/webhooks/`
-- **Event Schemas**: `specs/events/`
+Subdirectories are mirrored:
 
-### 4.3 Event Architecture
-<!-- If using events/messaging -->
+```
+<repo>/dotfiles/.config/nvim/  →  ~/.config/nvim/
+```
 
-| Event | Publisher | Subscribers | Schema |
-|-------|-----------|-------------|--------|
-| `user.created` | User Service | Notification, Analytics | `events/user.json` |
-| `order.completed` | Core Service | Notification, Billing | `events/order.json` |
+### 4.2 Collision Handling
+
+| State of `$HOME/<file>` | Default behaviour | With `--force` |
+|------------------------|-------------------|----------------|
+| Does not exist | Create symlink | Create symlink |
+| Already correct symlink | Skip (no-op) | Skip (no-op) |
+| Symlink to wrong target | Warn, skip | Replace symlink |
+| Regular file | Warn, skip | Backup to `.bak`, replace |
+| Directory | Warn, skip | Not replaced (manual action required) |
 
 ---
 
-## 5. Infrastructure Architecture
+## 5. Package Installation
 
-### 5.1 Deployment Diagram
+### 5.1 Per-Type Behaviour
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Cloud Provider                        │
-├─────────────────────────────────────────────────────────────┤
-│  Region: [us-east-1]                                        │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  VPC: Production                                     │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │   │
-│  │  │ Public      │  │ Private     │  │ Data        │ │   │
-│  │  │ Subnet      │  │ Subnet      │  │ Subnet      │ │   │
-│  │  │             │  │             │  │             │ │   │
-│  │  │ [ALB]       │  │ [ECS/K8s]   │  │ [RDS]       │ │   │
-│  │  │ [NAT]       │  │ [Workers]   │  │ [ElastiCache│ │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘ │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+| Type | Command | Idempotency |
+|------|---------|-------------|
+| `apt` | `sudo apt-get install -y` | apt skips if already installed |
+| `snap` | `sudo snap install` | snap no-ops if already installed |
+| `flatpak` | `flatpak install -y` | flatpak no-ops if already installed |
+| `deb` | `wget <url> && sudo dpkg -i` | `dpkg -i` upgrades/reinstalls; check version first |
+| `custom` | eval of defined command | must be written idempotent by the spec author |
 
-### 5.2 Environment Strategy
+### 5.2 Execution Order
 
-| Environment | Purpose | Data | Access |
-|-------------|---------|------|--------|
-| Development | Local development | Synthetic | Developers |
-| Staging | Integration testing | Sanitized copy | Team |
-| Production | Live system | Real | Restricted |
-
-### 5.3 Scaling Strategy
-
-| Component | Scaling Type | Trigger | Limits |
-|-----------|--------------|---------|--------|
-| API Servers | Horizontal | CPU > 70% | 2-20 instances |
-| Workers | Horizontal | Queue depth > 100 | 1-10 instances |
-| Database | Vertical + Read Replicas | Manual | [Size limits] |
+Within a provisioning run, types are installed in this order:
+1. `apt` — most common, required by others
+2. `snap`
+3. `flatpak`
+4. `deb`
+5. `custom`
 
 ---
 
-## 6. Security Architecture
+## 6. Security Considerations
 
-### 6.1 Security Layers
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      WAF / DDoS Protection                   │
-├─────────────────────────────────────────────────────────────┤
-│                      API Gateway (Auth)                      │
-├─────────────────────────────────────────────────────────────┤
-│                   Application Security                       │
-│  [Input Validation] [Output Encoding] [CSRF] [Rate Limiting]│
-├─────────────────────────────────────────────────────────────┤
-│                      Data Security                           │
-│  [Encryption at Rest] [Encryption in Transit] [Key Mgmt]    │
-├─────────────────────────────────────────────────────────────┤
-│                   Infrastructure Security                    │
-│  [Network Isolation] [IAM] [Secrets Management] [Logging]   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 6.2 Authentication & Authorization
-
-| Aspect | Implementation |
-|--------|----------------|
-| User Auth | OAuth 2.0 / OIDC via [Provider] |
-| Service Auth | mTLS / API Keys |
-| Authorization | RBAC with [permissions model] |
-| Session | JWT with [expiry] refresh tokens |
-
-### 6.3 Data Classification
-
-| Classification | Examples | Controls |
-|----------------|----------|----------|
-| Public | Marketing content | None |
-| Internal | Business metrics | Auth required |
-| Confidential | User PII | Encryption, audit logs |
-| Restricted | Payment data | Encryption, PCI compliance |
+| Concern | Approach |
+|---------|----------|
+| sudo scope | Only individual package install commands; not the whole script |
+| Custom scripts | Must be reviewed before adding to a profile; no auto-fetching of scripts |
+| No secrets | No credentials, tokens, or passwords anywhere in the repo |
+| Dotfile scope | Only files in `dotfiles/`; no writes outside `$HOME` |
+| deb downloads | wget to a temp file; checksum validation recommended in future ADR |
 
 ---
 
-## 7. Observability
+## 7. Development Standards
 
-### 7.1 Monitoring Stack
+### 7.1 Script Layout (every script)
 
-| Capability | Tool | Purpose |
-|------------|------|---------|
-| Metrics | [Prometheus/CloudWatch] | System and business metrics |
-| Logging | [ELK/CloudWatch Logs] | Centralized log aggregation |
-| Tracing | [Jaeger/X-Ray] | Distributed tracing |
-| Alerting | [PagerDuty/OpsGenie] | Incident notification |
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-### 7.2 Key Metrics
+# Source dependencies
+source "$(dirname "$0")/utils.sh"
 
-| Metric | Target | Alert Threshold |
-|--------|--------|-----------------|
-| API Latency (P95) | < 200ms | > 500ms |
-| Error Rate | < 0.1% | > 1% |
-| Availability | 99.9% | < 99.5% |
-| CPU Utilization | < 70% | > 85% |
+# Constants
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-### 7.3 Logging Standards
-
-```json
-{
-  "timestamp": "ISO8601",
-  "level": "INFO|WARN|ERROR",
-  "service": "service-name",
-  "trace_id": "uuid",
-  "message": "Human readable message",
-  "context": { "user_id": "...", "request_id": "..." }
+# Functions
+function_name() {
+  local arg1="$1"
+  # implementation
 }
+
+# Main (only in entrypoint scripts)
+main() {
+  # ...
+}
+main "$@"
 ```
+
+### 7.2 Key Patterns
+
+| Pattern | Usage |
+|---------|-------|
+| Guard clause | Check preconditions at top; exit early |
+| Named functions | All logic in named functions, not inline |
+| Local variables | `local var=` inside functions; never global side effects |
+| Idempotency check | Check state before acting, not just after |
+| Structured logging | `log_info`, `log_warn`, `log_error` from utils.sh |
 
 ---
 
-## 8. Development Standards
+## 8. Appendix
 
-### 8.1 Code Organization
+### A. Architecture Decision Records
 
-```
-src/
-├── api/              # API route handlers
-├── services/         # Business logic
-├── models/           # Data models
-├── repositories/     # Data access
-├── utils/            # Shared utilities
-├── config/           # Configuration
-└── tests/            # Test files
-```
+See `../decisions/` for ADRs:
+- (none yet — decisions so far documented in CONTEXT.md)
 
-### 8.2 Key Patterns
-
-| Pattern | Usage | Example |
-|---------|-------|---------|
-| Repository | Data access abstraction | `UserRepository.findById()` |
-| Service | Business logic encapsulation | `AuthService.authenticate()` |
-| Factory | Object creation | `NotificationFactory.create()` |
-| Strategy | Algorithm selection | `PaymentStrategy` |
-
-### 8.3 Cross-Cutting Concerns
-
-| Concern | Implementation |
-|---------|----------------|
-| Error Handling | [Pattern - e.g., Result types, exceptions] |
-| Validation | [Library/approach] |
-| Logging | [Library] with structured format |
-| Configuration | Environment variables + [config library] |
-
----
-
-## 9. Appendix
-
-### A. Technology Radar
-
-| Technology | Status | Notes |
-|------------|--------|-------|
-| [Tech 1] | Adopt | Production ready |
-| [Tech 2] | Trial | Evaluating |
-| [Tech 3] | Hold | Not recommended |
-
-### B. Architecture Decision Records
-
-See `../decisions/` for detailed ADRs:
-- ADR-001: [Decision title]
-- ADR-002: [Decision title]
-
-### C. Revision History
+### B. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0.0 | YYYY-MM-DD | [Name] | Initial version |
+| 1.0.0 | 2026-02-25 | Jerry | Initial architecture for dotfiles provisioning system |

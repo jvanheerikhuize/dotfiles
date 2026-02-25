@@ -49,24 +49,180 @@ settings:
 # Specification registry
 # Add specs here to track them centrally and enable batch processing
 specifications:
-  # Example entry (uncomment and modify):
-  # - id: "FEAT-0001"
-  #   file: "specs/features/FEAT-0001-user-authentication.yaml"
-  #   status: "approved"  # draft | review | approved | implemented | deprecated
-  #   auto_implement: true  # Set to true to include in scheduled processing
-  #   priority: "high"
-  #   assignee: "username"
-  #   target_version: "1.0.0"
-  #   notes: "Core authentication feature"
-  #   labels:
-  #     - "authentication"
-  #     - "security"
+  - id: "FEAT-0001"
+    file: "specs/features/FEAT-0001-core-provisioning-engine.yaml"
+    status: "approved"
+    auto_implement: false
+    priority: "critical"
+    assignee: "Jerry"
+    target_version: "1.0.0"
+    notes: "Entrypoint install.sh, apt packages, profile inheritance, dotfile symlinking"
+    labels:
+      - "provisioning"
+      - "bash"
+      - "packages"
+      - "profiles"
 
-  # - id: "API-0001"
-  #   file: "specs/api/users-api.openapi.yaml"
-  #   status: "approved"
-  #   auto_implement: true
-  #   priority: "high"
+  - id: "FEAT-0002"
+    file: "specs/features/FEAT-0002-multi-type-package-support.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "high"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "snap, flatpak, deb URL, custom script package types"
+    labels:
+      - "packages"
+      - "snap"
+      - "flatpak"
+
+  - id: "FEAT-0003"
+    file: "specs/features/FEAT-0003-base-shell-dotfiles.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "high"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: ".bashrc, .bash_aliases, .bash_profile, .gitconfig content"
+    labels:
+      - "dotfiles"
+      - "shell"
+      - "git"
+
+  - id: "FEAT-0004"
+    file: "specs/features/FEAT-0004-smoke-test-suite.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "medium"
+    assignee: "Jerry"
+    target_version: "1.2.0"
+    notes: "Docker-based smoke tests for all profiles"
+    labels:
+      - "testing"
+      - "docker"
+      - "ci"
+
+  - id: "FEAT-0005"
+    file: "specs/features/FEAT-0005-dry-run-mode.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "high"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "--dry-run flag: preview installs and symlinks without executing"
+    labels:
+      - "ux"
+      - "safety"
+
+  - id: "FEAT-0006"
+    file: "specs/features/FEAT-0006-profile-yaml-validation.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "high"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Validate profile YAML before any installs; --validate-only flag"
+    labels:
+      - "validation"
+      - "safety"
+
+  - id: "FEAT-0007"
+    file: "specs/features/FEAT-0007-run-summary-report.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "medium"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Summary table at end of run: installed, skipped, linked, warnings"
+    labels:
+      - "ux"
+      - "logging"
+
+  - id: "FEAT-0008"
+    file: "specs/features/FEAT-0008-git-identity-bootstrap.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "high"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Interactive git user.name/email prompt; writes ~/.gitconfig.local"
+    labels:
+      - "git"
+      - "bootstrap"
+
+  - id: "FEAT-0009"
+    file: "specs/features/FEAT-0009-ssh-key-setup.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "medium"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Generate ed25519 SSH key, set permissions, write ~/.ssh/config, print public key"
+    labels:
+      - "ssh"
+      - "security"
+      - "bootstrap"
+
+  - id: "FEAT-0010"
+    file: "specs/features/FEAT-0010-nerd-font-installation.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "low"
+    assignee: "Jerry"
+    target_version: "1.2.0"
+    notes: "Download and install Nerd Fonts into ~/.local/share/fonts/"
+    labels:
+      - "fonts"
+      - "desktop"
+
+  - id: "FEAT-0011"
+    file: "specs/features/FEAT-0011-gnome-dconf-settings.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "low"
+    assignee: "Jerry"
+    target_version: "1.2.0"
+    notes: "Apply GNOME dconf settings from repo dump file on desktop profile"
+    labels:
+      - "gnome"
+      - "desktop"
+      - "dconf"
+
+  - id: "FEAT-0012"
+    file: "specs/features/FEAT-0012-log-to-file.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "medium"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Tee all output to timestamped log file in ~/.local/logs/dotfiles/"
+    labels:
+      - "logging"
+      - "observability"
+
+  - id: "FEAT-0013"
+    file: "specs/features/FEAT-0013-status-diff-command.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "medium"
+    assignee: "Jerry"
+    target_version: "1.2.0"
+    notes: "--status flag: compare system state vs profile; exit 1 on drift"
+    labels:
+      - "ux"
+      - "drift-detection"
+
+  - id: "FEAT-0014"
+    file: "specs/features/FEAT-0014-connectivity-check.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "medium"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Check internet before installs; --skip-connectivity-check escape hatch"
+    labels:
+      - "safety"
+      - "networking"
 
 # Spec categories for organization
 categories:

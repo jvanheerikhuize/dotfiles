@@ -23,63 +23,71 @@
 
 ## 1. Project Summary
 
-<!-- Fill this section with your project's key information -->
-
 ### Identity
-- **Name**: [Project Name]
-- **Type**: [Web App | API | Library | CLI | etc.]
-- **Stage**: [Greenfield | MVP | Growth | Mature]
+- **Name**: dotfiles
+- **Type**: CLI / Provisioning Scripts
+- **Stage**: Greenfield
 
 ### One-Liner
-> [One sentence describing what this project does and for whom]
+> Stage 2 Ubuntu provisioning system that installs packages (apt, snap, flatpak, deb, custom) and applies dotfiles via symlinks, driven by a declarative YAML manifest with support for role-based profiles.
 
 ### Tech Stack
 | Layer | Technology |
 |-------|------------|
-| Language | [TypeScript, Python, Go, etc.] |
-| Framework | [Next.js, FastAPI, etc.] |
-| Database | [PostgreSQL, MongoDB, etc.] |
-| Infrastructure | [AWS, GCP, Vercel, etc.] |
+| Language | Bash |
+| Config | YAML |
+| Package managers | apt, snap, flatpak, direct .deb, custom scripts |
+| Dotfile strategy | Symlinks into $HOME |
+| Platform | Ubuntu (Linux) |
+
+### Provisioning Framework Context
+- **Stage 1**: Unattended Ubuntu base install via `Autoinstall.yaml` — installs OS, sets up users/partitions
+- **Stage 2** (this repo): Post-boot provisioning — installs tools, applies configs, links dotfiles
 
 ---
 
 ## 2. Current State
 
 ### Active Work
-<!-- What's being worked on right now? -->
-- [ ] [Current feature/task 1]
-- [ ] [Current feature/task 2]
+- [ ] FEAT-0001: Core provisioning engine (install.sh + YAML manifest + apt + profile system)
 
 ### Recent Changes
-<!-- What changed recently that AI should know about? -->
-- [Date]: [Change description]
-- [Date]: [Change description]
+- 2026-02-25: Repository initialized from spec-driven development template
 
 ### Known Issues
-<!-- Problems AI should be aware of -->
-- [Issue 1]: [Brief description]
-- [Issue 2]: [Brief description]
+- None yet (greenfield)
 
 ---
 
 ## 3. Key Concepts
 
 ### Domain Model
-<!-- Core entities and their relationships -->
 ```
-[User] ──1:N── [Account] ──1:N── [Resource]
+[Profile] ──extends──> [Base Profile]
+    │
+    └──includes──> [Package List]
+                       │
+                       ├── apt packages
+                       ├── snap packages
+                       ├── flatpak packages
+                       ├── deb packages (URL)
+                       └── custom scripts
+
+[Dotfiles repo] ──symlinked into──> [$HOME]
 ```
 
-### Bounded Contexts
-<!-- If using DDD, list bounded contexts -->
-| Context | Responsibility | Key Entities |
-|---------|---------------|--------------|
-| [Context 1] | [What it handles] | [Entities] |
+### Profile Hierarchy
+| Profile | Inherits From | Purpose |
+|---------|--------------|---------|
+| base | — | Core CLI tools every machine needs |
+| desktop | base | GUI apps and desktop environment tools |
+| server | base | Server/headless tooling |
+| dev | desktop | Full developer environment |
 
 ### Critical Paths
-<!-- Most important user journeys -->
-1. **[Path Name]**: [Step 1] → [Step 2] → [Step 3]
-2. **[Path Name]**: [Step 1] → [Step 2] → [Step 3]
+1. **Full provisioning**: `./install.sh --profile dev` → reads profile YAML → installs packages by type → links dotfiles
+2. **Package install only**: `./install.sh --profile base --skip-dotfiles`
+3. **Dotfiles only**: `./install.sh --dotfiles-only`
 
 ---
 
@@ -88,29 +96,40 @@
 ### Entry Points
 | Purpose | Location |
 |---------|----------|
-| Application start | `src/index.ts` |
-| API routes | `src/api/routes/` |
-| Main business logic | `src/services/` |
-| Configuration | `src/config/` |
+| Main provisioning script | `install.sh` |
+| Package manifests | `profiles/` |
+| Dotfiles | `dotfiles/` |
+| Package type installers | `scripts/` |
 
 ### Key Files
-<!-- Files AI should prioritize reading -->
 ```
-src/
-├── index.ts              # Application entry
-├── config/index.ts       # Configuration
-├── services/
-│   └── [core].service.ts # Core business logic
-└── models/
-    └── [main].model.ts   # Main domain model
+dotfiles/
+├── install.sh                  # Main entrypoint
+├── profiles/
+│   ├── base.yaml              # Base profile (always applied)
+│   ├── desktop.yaml           # Desktop profile
+│   ├── server.yaml            # Server profile
+│   └── dev.yaml               # Developer profile
+├── dotfiles/                   # Actual config files to symlink
+│   └── ...
+└── scripts/                    # Package type install helpers
+    ├── packages.sh            # Package install dispatcher
+    ├── dotfiles.sh            # Symlink management
+    └── utils.sh               # Shared utilities (logging, etc.)
 ```
 
 ### Module Map
-<!-- How major modules relate -->
 ```
-[API Layer] → [Service Layer] → [Repository Layer] → [Database]
-     ↓              ↓                  ↓
-[Validators]   [Domain Models]   [Query Builders]
+install.sh
+  → scripts/utils.sh          (logging, error handling)
+  → profiles/<name>.yaml      (package manifest for profile)
+  → scripts/packages.sh       (dispatch by package type)
+      → apt-get install
+      → snap install
+      → flatpak install
+      → wget + dpkg -i (deb)
+      → custom script runner
+  → scripts/dotfiles.sh       (symlink $HOME dotfiles)
 ```
 
 ---
@@ -118,25 +137,23 @@ src/
 ## 5. Development Rules
 
 ### Must Follow
-<!-- Non-negotiable rules -->
-1. **All code must have tests** - No exceptions for business logic
-2. **Use existing patterns** - Check PATTERNS.md before creating new ones
-3. **No secrets in code** - Use environment variables
-4. **Spec before code** - Features require approved specs
+1. **Idempotent** - Running install.sh multiple times must be safe (no duplicate installs, no broken symlinks)
+2. **Profiles only change by spec** - Package list changes require an approved spec
+3. **No secrets in repo** - No credentials, tokens, or passwords anywhere
+4. **Bash compatibility** - Scripts must work on bash 5.x (Ubuntu 22.04+)
+5. **Fail loudly** - Exit non-zero and print clear errors; never silently skip failures
 
 ### Prefer
-<!-- Strong preferences -->
-1. Composition over inheritance
-2. Explicit over implicit
-3. Small functions (< 20 lines)
-4. Descriptive names over comments
+1. `set -euo pipefail` in all scripts
+2. Named functions over inline logic
+3. YAML for all configuration (not hardcoded lists in scripts)
+4. `sudo` only where explicitly needed (not blanket sudo on the whole script)
 
 ### Avoid
-<!-- Anti-patterns and practices to avoid -->
-1. God classes/functions
-2. Deep nesting (> 3 levels)
-3. Magic numbers/strings
-4. Mutable global state
+1. Hardcoding package lists in shell scripts — use YAML manifests
+2. `curl | bash` without checksum verification
+3. Modifying system files outside of explicitly stated scope
+4. Assuming internet access — check connectivity before fetching
 
 ---
 
@@ -145,16 +162,15 @@ src/
 ### Coverage Expectations
 | Type | Target | Focus |
 |------|--------|-------|
-| Unit | 80% | Services, utilities |
-| Integration | Key paths | API endpoints |
-| E2E | Critical flows | User journeys |
+| Unit | Key functions | YAML parsing, symlink logic, package dispatch |
+| Integration | Per package type | Install a test package of each type in CI |
+| Smoke | Full run | Run install.sh --profile base in a Docker/VM |
 
 ### Test Locations
 ```
 tests/
-├── unit/           # src/__tests__/ also acceptable
-├── integration/
-└── e2e/
+├── unit/           # bats or shellspec tests for individual functions
+└── smoke/          # Docker-based full provisioning smoke tests
 ```
 
 ---
@@ -163,78 +179,54 @@ tests/
 
 ### Prerequisites
 ```bash
-# Required tools
-[tool1] >= [version]
-[tool2] >= [version]
+# Stage 1 must already be complete (Ubuntu installed)
+ubuntu >= 22.04
+bash >= 5.0
+git >= 2.x
 ```
 
 ### Quick Start
 ```bash
-# Clone and setup
-git clone [repo-url]
-cd [project]
-[install command]
-[setup command]
-[run command]
+git clone <repo-url> ~/dotfiles
+cd ~/dotfiles
+./install.sh --profile base
 ```
 
-### Environment Variables
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | Yes | Database connection string |
-| `API_KEY` | Yes | External service API key |
-| `DEBUG` | No | Enable debug logging |
+### No Environment Variables Required
+All configuration is declarative YAML. No `.env` files needed.
 
 ---
 
 ## 8. AI Assistant Guidelines
 
 ### When Generating Code
-1. **Read before writing** - Understand existing patterns first
-2. **Match style** - Follow PATTERNS.md conventions
-3. **Minimal changes** - Don't refactor unrelated code
-4. **Include tests** - Generate tests alongside implementation
+1. **Bash first** - All scripts in bash; no Python/Ruby/etc. dependencies for provisioning
+2. **YAML config** - Package lists always in YAML, never hardcoded in scripts
+3. **Idempotent** - Every operation must be safe to run twice
+4. **Minimal sudo** - Elevate only for operations that require it
 
 ### When Answering Questions
-1. **Reference files** - Point to specific code locations
-2. **Cite architecture** - Link to relevant ADRs
-3. **Stay current** - Check "Recent Changes" above
+1. **Reference files** - Point to specific script locations
+2. **Check profiles/** - Package decisions belong in profile YAML, not scripts
 
 ### When Debugging
-1. **Check known issues** - Review section above first
-2. **Trace data flow** - Follow the module map
-3. **Verify assumptions** - Read actual implementation
+1. **Check utils.sh** - Logging and error helpers live there
+2. **Check profile YAML** - Most "why isn't X installed" issues are manifest issues
 
 ### Forbidden Actions
-<!-- Things AI should never do -->
-- Delete or modify test files without explicit request
-- Change security-related code without review
-- Modify configuration files without confirmation
-- Add dependencies without discussion
+- Do not add packages to profiles without a spec
+- Do not modify system-level config files (fstab, sudoers, etc.) without explicit spec
+- Do not add network calls without connectivity checks
+- Do not store credentials or API keys anywhere in the repo
 
 ---
 
 ## 9. Related Documentation
 
 ### Internal
-- [specs/](specs/) - Product specifications
+- [specs/](../specs/) - Feature specifications
 - [architecture/](architecture/) - Technical architecture
 - [decisions/](decisions/) - Architecture Decision Records
-
-### External
-- [Design System]([link])
-- [API Documentation]([link])
-- [Runbook]([link])
-
----
-
-## 10. Contacts
-
-| Role | Contact | When to Escalate |
-|------|---------|-----------------|
-| Tech Lead | @[username] | Architecture decisions |
-| Product | @[username] | Requirement clarifications |
-| Security | @[username] | Security concerns |
 
 ---
 
@@ -242,13 +234,6 @@ cd [project]
 
 | Field | Value |
 |-------|-------|
-| Last Updated | YYYY-MM-DD |
-| Update Frequency | Weekly / After major changes |
-| Owner | [Team/Person] |
-
-### Update Checklist
-When updating this document:
-- [ ] Update "Current State" section
-- [ ] Review "Key Files" for accuracy
-- [ ] Check "Known Issues" is current
-- [ ] Verify links are working
+| Last Updated | 2026-02-25 |
+| Update Frequency | After each implemented spec |
+| Owner | Jerry |

@@ -1,462 +1,361 @@
 # Code Patterns & Conventions
 
-> **For AI Assistants**: Follow these patterns when generating or modifying code. Consistency is critical.
+> **For AI Assistants**: Follow these patterns when generating or modifying code. Every script in this repo must conform to these conventions.
 
 ## Document Info
 
 | Field | Value |
 |-------|-------|
 | Version | 1.0.0 |
-| Last Updated | YYYY-MM-DD |
+| Last Updated | 2026-02-25 |
 
 ---
 
 ## 1. General Principles
 
-### 1.1 Core Values
-1. **Clarity over cleverness** - Code should be readable by humans first
-2. **Explicit over implicit** - Make behavior obvious
-3. **Composition over inheritance** - Prefer small, composable units
-4. **Fail fast** - Validate early, fail with clear errors
-
-### 1.2 SOLID Principles
-- **S**ingle Responsibility - One reason to change
-- **O**pen/Closed - Open for extension, closed for modification
-- **L**iskov Substitution - Subtypes must be substitutable
-- **I**nterface Segregation - Small, focused interfaces
-- **D**ependency Inversion - Depend on abstractions
+1. **Clarity over cleverness** — Bash is read by humans first; avoid obscure one-liners
+2. **Explicit over implicit** — Make behaviour obvious; no silent failures
+3. **Fail fast** — Validate early with `set -euo pipefail`; exit on error with a clear message
+4. **Idempotent by default** — Every operation must be safe to run multiple times
 
 ---
 
-## 2. Naming Conventions
+## 2. Script Header (required in every script)
 
-### 2.1 General Rules
+```bash
+#!/usr/bin/env bash
+# Brief description of what this script does
+set -euo pipefail
+
+# Source shared utilities (adjust relative path as needed)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+```
+
+Rules:
+- `#!/usr/bin/env bash` — always; never `/bin/bash` (portability)
+- `set -euo pipefail` — always; no exceptions
+- Source `utils.sh` for logging helpers
+- `SCRIPT_DIR` uses `BASH_SOURCE[0]` — works when sourced or called from any directory
+
+---
+
+## 3. Naming Conventions
 
 | Element | Convention | Example |
 |---------|------------|---------|
-| Files | kebab-case | `user-service.ts` |
-| Classes | PascalCase | `UserService` |
-| Functions | camelCase | `getUserById` |
-| Constants | SCREAMING_SNAKE | `MAX_RETRIES` |
-| Variables | camelCase | `userCount` |
-| Interfaces | PascalCase (no I prefix) | `UserRepository` |
-| Types | PascalCase | `UserCreateInput` |
-| Enums | PascalCase | `UserStatus.Active` |
-
-### 2.2 Naming Patterns
-
-```
-# Functions - verb + noun
-createUser(), getUserById(), deleteExpiredSessions()
-
-# Booleans - is/has/can/should prefix
-isActive, hasPermission, canEdit, shouldRetry
-
-# Collections - plural nouns
-users, pendingOrders, activeConnections
-
-# Handlers - on + event
-onUserCreated, onPaymentReceived
-
-# Factories - create + noun
-createLogger(), createDatabaseConnection()
-```
-
-### 2.3 Domain Language
-<!-- Define ubiquitous language for your domain -->
-
-| Term | Definition | Usage |
-|------|------------|-------|
-| [Term] | [Definition] | [How to use in code] |
+| Script files | `kebab-case.sh` | `install-packages.sh` |
+| Functions | `snake_case` | `install_apt_package` |
+| Local variables | `snake_case` | `package_name` |
+| Constants / readonly | `SCREAMING_SNAKE` | `DOTFILES_DIR` |
+| Boolean flags | `is_` / `has_` / `skip_` prefix | `is_verbose`, `skip_dotfiles` |
 
 ---
 
-## 3. File Organization
+## 4. Logging Pattern
 
-### 3.1 Directory Structure
+All output goes through helpers in `scripts/utils.sh`. Never use bare `echo`.
 
-```
-src/
-├── api/                    # HTTP layer
-│   ├── routes/            # Route definitions
-│   ├── middleware/        # Express/Koa middleware
-│   ├── validators/        # Request validation
-│   └── transformers/      # Response transformation
-│
-├── services/              # Business logic
-│   ├── user/             # Feature-based organization
-│   │   ├── user.service.ts
-│   │   ├── user.service.test.ts
-│   │   └── index.ts
-│   └── ...
-│
-├── repositories/          # Data access
-│   ├── user.repository.ts
-│   └── ...
-│
-├── models/               # Domain models
-│   ├── user.model.ts
-│   └── ...
-│
-├── lib/                  # Shared libraries
-│   ├── database/
-│   ├── cache/
-│   └── logger/
-│
-├── config/               # Configuration
-│   └── index.ts
-│
-└── types/                # Type definitions
-    └── index.ts
+```bash
+# utils.sh defines these:
+log_info()  { echo "[INFO]  $(date '+%H:%M:%S') $*"; }
+log_warn()  { echo "[WARN]  $(date '+%H:%M:%S') $*" >&2; }
+log_error() { echo "[ERROR] $(date '+%H:%M:%S') $*" >&2; exit 1; }
+log_step()  { echo ""; echo "==> $*"; }   # section header
 ```
 
-### 3.2 File Contents Order
+Usage:
 
-```typescript
-// 1. Imports (external, then internal)
-import { external } from 'external-lib';
-import { internal } from '@/lib/internal';
-
-// 2. Types/Interfaces
-interface UserInput { ... }
-
-// 3. Constants
-const MAX_RETRIES = 3;
-
-// 4. Main export (class or function)
-export class UserService { ... }
-
-// 5. Helper functions (private)
-function validateInput() { ... }
+```bash
+log_step "Installing apt packages"
+log_info "Installing: curl"
+log_warn "Package vim already installed, skipping"
+log_error "apt-get failed for package: curl"   # exits 1
 ```
 
 ---
 
-## 4. Code Patterns
+## 5. Function Pattern
 
-### 4.1 Error Handling
+```bash
+# Good: named, documented, uses locals, idempotency check
+install_apt_package() {
+  local package="$1"
 
-**Pattern: Result Type**
-```typescript
-type Result<T, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+  if dpkg -s "$package" &>/dev/null 2>&1; then
+    log_info "Already installed: $package"
+    return 0
+  fi
 
-// Usage
-function getUser(id: string): Result<User> {
-  const user = db.find(id);
-  if (!user) {
-    return { success: false, error: new NotFoundError('User not found') };
-  }
-  return { success: true, data: user };
+  log_info "Installing: $package"
+  sudo apt-get install -y "$package"
 }
 
-// Handling
-const result = getUser('123');
-if (!result.success) {
-  logger.error(result.error);
-  return;
-}
-const user = result.data;
+# Bad: inline logic, no function, no idempotency check
+sudo apt-get install -y "$pkg"
 ```
 
-**Pattern: Custom Error Classes**
-```typescript
-class AppError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode: number = 500,
-    public isOperational: boolean = true
-  ) {
-    super(message);
-    this.name = this.constructor.name;
-  }
+Rules:
+- All logic in named functions
+- Always declare variables with `local` inside functions
+- Check state before acting (idempotency)
+- One function = one responsibility
+
+---
+
+## 6. Argument Parsing Pattern
+
+```bash
+# In the entrypoint script
+PROFILE="base"
+SKIP_DOTFILES=false
+DOTFILES_ONLY=false
+FORCE=false
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --profile)
+        PROFILE="$2"
+        shift 2
+        ;;
+      --skip-dotfiles)
+        SKIP_DOTFILES=true
+        shift
+        ;;
+      --dotfiles-only)
+        DOTFILES_ONLY=true
+        shift
+        ;;
+      --force)
+        FORCE=true
+        shift
+        ;;
+      --help)
+        usage
+        exit 0
+        ;;
+      *)
+        log_error "Unknown argument: $1"
+        ;;
+    esac
+  done
 }
 
-class NotFoundError extends AppError {
-  constructor(resource: string) {
-    super(`${resource} not found`, 'NOT_FOUND', 404);
-  }
-}
+usage() {
+  cat <<EOF
+Usage: $(basename "$0") [options]
 
-class ValidationError extends AppError {
-  constructor(message: string) {
-    super(message, 'VALIDATION_ERROR', 400);
-  }
-}
-```
-
-### 4.2 Dependency Injection
-
-```typescript
-// Define interface
-interface UserRepository {
-  findById(id: string): Promise<User | null>;
-  save(user: User): Promise<User>;
-}
-
-// Service depends on abstraction
-class UserService {
-  constructor(private userRepo: UserRepository) {}
-
-  async getUser(id: string): Promise<User> {
-    const user = await this.userRepo.findById(id);
-    if (!user) throw new NotFoundError('User');
-    return user;
-  }
-}
-
-// Inject implementation
-const userService = new UserService(new PostgresUserRepository(db));
-```
-
-### 4.3 Repository Pattern
-
-```typescript
-interface Repository<T, ID> {
-  findById(id: ID): Promise<T | null>;
-  findAll(filter?: Partial<T>): Promise<T[]>;
-  save(entity: T): Promise<T>;
-  delete(id: ID): Promise<void>;
-}
-
-class UserRepository implements Repository<User, string> {
-  constructor(private db: Database) {}
-
-  async findById(id: string): Promise<User | null> {
-    const row = await this.db.query('SELECT * FROM users WHERE id = $1', [id]);
-    return row ? this.toEntity(row) : null;
-  }
-
-  private toEntity(row: any): User {
-    return new User(row.id, row.email, row.name);
-  }
-}
-```
-
-### 4.4 Service Layer Pattern
-
-```typescript
-class OrderService {
-  constructor(
-    private orderRepo: OrderRepository,
-    private paymentService: PaymentService,
-    private notificationService: NotificationService
-  ) {}
-
-  async createOrder(input: CreateOrderInput): Promise<Order> {
-    // 1. Validate
-    this.validateInput(input);
-
-    // 2. Business logic
-    const order = Order.create(input);
-
-    // 3. Persist
-    const savedOrder = await this.orderRepo.save(order);
-
-    // 4. Side effects
-    await this.notificationService.sendOrderConfirmation(savedOrder);
-
-    return savedOrder;
-  }
-}
-```
-
-### 4.5 Factory Pattern
-
-```typescript
-class NotificationFactory {
-  static create(type: NotificationType, config: NotificationConfig): Notification {
-    switch (type) {
-      case 'email':
-        return new EmailNotification(config);
-      case 'sms':
-        return new SMSNotification(config);
-      case 'push':
-        return new PushNotification(config);
-      default:
-        throw new Error(`Unknown notification type: ${type}`);
-    }
-  }
+Options:
+  --profile PROFILE    Profile to apply (default: base)
+  --skip-dotfiles      Install packages only
+  --dotfiles-only      Apply dotfiles only
+  --force              Replace existing dotfiles (backs up to .bak)
+  --help               Show this help
+EOF
 }
 ```
 
 ---
 
-## 5. API Patterns
+## 7. YAML Parsing Pattern
 
-### 5.1 REST Conventions
+Use `python3` inline — it's on every Ubuntu 22.04 system by default.
 
-| Action | Method | Path | Response |
-|--------|--------|------|----------|
-| List | GET | `/users` | 200 + array |
-| Get | GET | `/users/:id` | 200 + object |
-| Create | POST | `/users` | 201 + object |
-| Update | PUT | `/users/:id` | 200 + object |
-| Partial Update | PATCH | `/users/:id` | 200 + object |
-| Delete | DELETE | `/users/:id` | 204 |
-
-### 5.2 Response Format
-
-```json
-// Success
-{
-  "data": { ... },
-  "meta": {
-    "page": 1,
-    "limit": 20,
-    "total": 100
-  }
+```bash
+# Extract a scalar value from YAML
+yaml_get() {
+  local file="$1"
+  local key="$2"
+  python3 -c "
+import yaml
+with open('${file}') as f:
+    data = yaml.safe_load(f)
+keys = '${key}'.split('.')
+val = data
+for k in keys:
+    val = val.get(k) if isinstance(val, dict) else None
+print(val if val is not None else '')
+"
 }
 
-// Error
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input",
-    "details": [
-      { "field": "email", "message": "Invalid email format" }
-    ]
-  }
+# Extract a list from YAML as newline-separated values
+yaml_get_list() {
+  local file="$1"
+  local key="$2"
+  python3 -c "
+import yaml
+with open('${file}') as f:
+    data = yaml.safe_load(f)
+keys = '${key}'.split('.')
+val = data
+for k in keys:
+    val = val.get(k) if isinstance(val, dict) else None
+if isinstance(val, list):
+    for item in val:
+        print(item)
+"
+}
+
+# Usage:
+extends=$(yaml_get "profiles/desktop.yaml" "profile.extends")
+mapfile -t apt_packages < <(yaml_get_list "profiles/base.yaml" "packages.apt")
+```
+
+---
+
+## 8. Idempotency Patterns
+
+### Package install — check before installing
+
+```bash
+install_apt_package() {
+  local pkg="$1"
+  if dpkg -s "$pkg" &>/dev/null 2>&1; then
+    log_info "Already installed: $pkg"
+    return 0
+  fi
+  log_info "Installing (apt): $pkg"
+  sudo apt-get install -y "$pkg"
+}
+
+install_snap_package() {
+  local pkg="$1"
+  if snap list "$pkg" &>/dev/null 2>&1; then
+    log_info "Already installed: $pkg"
+    return 0
+  fi
+  log_info "Installing (snap): $pkg"
+  sudo snap install "$pkg"
 }
 ```
 
-### 5.3 Controller Pattern
+### Symlink — check before linking
 
-```typescript
-class UserController {
-  constructor(private userService: UserService) {}
+```bash
+link_dotfile() {
+  local src="$1"   # absolute path in repo
+  local dest="$2"  # absolute path in $HOME
+  local force="$3" # true|false
 
-  async getUser(req: Request, res: Response) {
-    const { id } = req.params;
+  if [[ -L "$dest" && "$(readlink "$dest")" == "$src" ]]; then
+    log_info "Already linked: $dest"
+    return 0
+  fi
 
-    const result = await this.userService.getUser(id);
+  if [[ -e "$dest" ]] && [[ "$force" != "true" ]]; then
+    log_warn "Skipping $dest — file exists (use --force to replace)"
+    return 0
+  fi
 
-    if (!result.success) {
-      return res.status(404).json({ error: result.error });
-    }
+  if [[ -e "$dest" ]] && [[ "$force" == "true" ]]; then
+    mv "$dest" "${dest}.bak"
+    log_info "Backed up: ${dest}.bak"
+  fi
 
-    return res.json({ data: result.data });
-  }
+  mkdir -p "$(dirname "$dest")"
+  ln -sf "$src" "$dest"
+  log_info "Linked: $dest → $src"
 }
 ```
 
 ---
 
-## 6. Testing Patterns
+## 9. Error Handling Pattern
 
-### 6.1 Test Organization
+```bash
+# Wrap external commands and provide context on failure
+run_or_fail() {
+  local description="$1"
+  shift
+  if ! "$@"; then
+    log_error "${description} failed (command: $*)"
+  fi
+}
 
-```
-tests/
-├── unit/                  # Unit tests (isolated)
-│   └── services/
-│       └── user.service.test.ts
-├── integration/           # Integration tests (with deps)
-│   └── api/
-│       └── users.test.ts
-└── e2e/                   # End-to-end tests
-    └── user-flow.test.ts
-```
-
-### 6.2 Test Structure (AAA)
-
-```typescript
-describe('UserService', () => {
-  describe('getUser', () => {
-    it('should return user when found', async () => {
-      // Arrange
-      const mockUser = { id: '1', email: 'test@example.com' };
-      const mockRepo = { findById: jest.fn().mockResolvedValue(mockUser) };
-      const service = new UserService(mockRepo);
-
-      // Act
-      const result = await service.getUser('1');
-
-      // Assert
-      expect(result).toEqual(mockUser);
-      expect(mockRepo.findById).toHaveBeenCalledWith('1');
-    });
-
-    it('should throw NotFoundError when user not found', async () => {
-      // Arrange
-      const mockRepo = { findById: jest.fn().mockResolvedValue(null) };
-      const service = new UserService(mockRepo);
-
-      // Act & Assert
-      await expect(service.getUser('999')).rejects.toThrow(NotFoundError);
-    });
-  });
-});
+# Usage:
+run_or_fail "apt update" sudo apt-get update
 ```
 
-### 6.3 Test Fixtures
+Prefer `log_error` (which exits 1) over bare `exit 1` — it always prints context.
 
-```typescript
-// fixtures/users.ts
-export const createTestUser = (overrides: Partial<User> = {}): User => ({
-  id: 'test-user-id',
-  email: 'test@example.com',
-  name: 'Test User',
-  createdAt: new Date('2024-01-01'),
-  ...overrides,
-});
+---
+
+## 10. Guard / Precondition Pattern
+
+```bash
+# Reject running as root
+require_not_root() {
+  if [[ $EUID -eq 0 ]]; then
+    log_error "Do not run as root. Use a regular user with sudo access."
+  fi
+}
+
+# Assert a command is available
+require_cmd() {
+  local cmd="$1"
+  if ! command -v "$cmd" &>/dev/null; then
+    log_error "Required command not found: $cmd"
+  fi
+}
+
+# Usage at top of install.sh:
+require_not_root
+require_cmd git
+require_cmd python3
 ```
 
 ---
 
-## 7. Documentation Patterns
+## 11. Profile Merge Pattern
 
-### 7.1 Code Comments
+```bash
+# Declare global arrays before calling load_profile
+APT_PACKAGES=()
+SNAP_PACKAGES=()
+FLATPAK_PACKAGES=()
 
-```typescript
-// DO: Explain WHY, not WHAT
-// Retry with exponential backoff to handle transient network failures
-const result = await retry(fetchData, { maxAttempts: 3 });
+# Merge a profile with its parent (recursive, depth-first)
+load_profile() {
+  local profile_name="$1"
+  local profile_file="${PROFILES_DIR}/${profile_name}.yaml"
 
-// DON'T: State the obvious
-// Loop through users
-for (const user of users) { ... }
-```
+  [[ -f "$profile_file" ]] || log_error "Profile not found: $profile_name"
 
-### 7.2 JSDoc for Public APIs
+  local extends
+  extends=$(yaml_get "$profile_file" "profile.extends")
 
-```typescript
-/**
- * Creates a new user account.
- *
- * @param input - User creation data
- * @returns The created user
- * @throws {ValidationError} If input is invalid
- * @throws {ConflictError} If email already exists
- *
- * @example
- * const user = await userService.createUser({
- *   email: 'user@example.com',
- *   name: 'John Doe'
- * });
- */
-async createUser(input: CreateUserInput): Promise<User> { ... }
+  # Recurse into parent first (base packages come first)
+  if [[ -n "$extends" && "$extends" != "None" && "$extends" != "null" ]]; then
+    load_profile "$extends"
+  fi
+
+  # Append this profile's packages to the global arrays
+  while IFS= read -r pkg; do
+    [[ -n "$pkg" ]] && APT_PACKAGES+=("$pkg")
+  done < <(yaml_get_list "$profile_file" "packages.apt")
+}
 ```
 
 ---
 
-## 8. Anti-Patterns to Avoid
+## 12. Anti-Patterns to Avoid
 
-| Anti-Pattern | Problem | Solution |
-|--------------|---------|----------|
-| God Class | Too many responsibilities | Split into focused services |
-| Magic Numbers | Unclear meaning | Use named constants |
-| Deep Nesting | Hard to read | Extract functions, early returns |
-| Shotgun Surgery | Changes spread everywhere | Improve cohesion |
-| Primitive Obsession | Primitives instead of objects | Create domain types |
-| Feature Envy | Method uses another class's data | Move method to that class |
+| Anti-Pattern | Problem | Correct Approach |
+|--------------|---------|-----------------|
+| `curl \| bash` without checksum | Arbitrary code execution | Download, verify checksum, then run |
+| Hardcoded package lists in `.sh` | Not readable by YAML tools / AI | Put lists in profile YAML |
+| Global variables mutated inside functions | Hard to reason about | Use `local`; pass values as arguments |
+| Running `sudo ./install.sh` as root | Breaks $HOME detection | Require non-root with sudo access |
+| Bare `exit 1` without message | Silent failures | Always use `log_error "reason"` |
+| `rm -rf` without path validation | Destructive accidents | Validate path is in expected scope first |
+| Skipping the idempotency check | Breaks re-runs | Always check state before acting |
+| `echo` for user-visible output | Bypasses log format | Use `log_info` / `log_warn` / `log_step` |
 
 ---
 
-## 9. Revision History
+## 13. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0.0 | YYYY-MM-DD | [Name] | Initial version |
+| 1.0.0 | 2026-02-25 | Jerry | Initial bash patterns for dotfiles provisioning |

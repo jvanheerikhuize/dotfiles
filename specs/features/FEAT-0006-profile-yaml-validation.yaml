@@ -1,0 +1,115 @@
+# Feature Specification: Profile YAML Validation
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0006"
+  title: "Profile YAML Validation"
+  version: "1.0.0"
+  status: "draft"
+  priority: "high"
+  author: "Jerry"
+  created_at: "2026-02-25"
+  updated_at: "2026-02-25"
+  tags:
+    - validation
+    - profiles
+    - yaml
+    - safety
+
+description:
+  summary: |
+    Validate all referenced profile YAML files before any packages are installed,
+    providing clear error messages for structural issues, unknown keys, circular
+    extends references, and missing parent profiles.
+
+  problem_statement: |
+    A typo in a profile YAML (e.g. wrong key name, invalid extends reference, non-list
+    value where a list is expected) currently causes cryptic python3 errors or silently
+    installs nothing. The failure may occur mid-run, after some packages are already
+    installed, leaving the system in a partially provisioned state.
+
+  proposed_solution: |
+    At the start of install.sh (before any installs), run a validation phase:
+    1. Parse the target profile YAML with python3
+    2. Verify all required keys are present (profile.name, packages.*)
+    3. Verify extends reference points to an existing profile file
+    4. Detect circular extends chains (A extends B extends A)
+    5. Verify all package list values are lists of strings
+    6. Print all validation errors at once, then exit 1
+    A --validate-only flag runs validation without installing anything.
+
+  out_of_scope:
+    - "Validating that package names exist in apt/snap/flatpak registries (requires network)"
+    - "Linting dotfile content"
+
+  dependencies:
+    - "FEAT-0001: Core provisioning engine (profile loading)"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "A profile YAML with a valid structure"
+    when: "install.sh is run"
+    then: "Validation passes silently and provisioning proceeds"
+
+  - id: "AC-002"
+    given: "A profile YAML missing the required 'profile' key"
+    when: "install.sh is run"
+    then: "The script exits 1 before installing anything"
+    and:
+      - "Error message: 'Validation error in profiles/base.yaml: missing required key: profile'"
+      - "All validation errors are printed before exiting (not one at a time)"
+
+  - id: "AC-003"
+    given: "A profile YAML with extends pointing to a non-existent profile"
+    when: "install.sh is run"
+    then: "The script exits 1 with: 'Validation error: profile \"base\" not found (referenced by \"desktop\")'"
+
+  - id: "AC-004"
+    given: "Two profiles that extend each other (A extends B, B extends A)"
+    when: "install.sh is run"
+    then: "The script exits 1 with: 'Validation error: circular extends detected: desktop → base → desktop'"
+
+  - id: "AC-005"
+    given: "A profile YAML where packages.apt is a string instead of a list"
+    when: "install.sh is run"
+    then: "The script exits 1 with: 'Validation error in profiles/base.yaml: packages.apt must be a list'"
+
+  - id: "AC-006"
+    given: "Any profile"
+    when: "./install.sh --profile base --validate-only is run"
+    then: "Validation runs and exits 0 (if valid) or 1 (if invalid) without installing anything"
+    and:
+      - "Output clearly states 'Validation passed' or lists all errors"
+
+  - id: "AC-007"
+    given: "Multiple profiles in the extends chain each with errors"
+    when: "install.sh is run"
+    then: "All errors across all profiles in the chain are reported together before exit"
+
+technical_requirements:
+  constraints:
+    - "Validation runs before any package installs — no partial provisioning on invalid profiles"
+    - "Implemented as a validate_profiles() function called at the top of main() in install.sh"
+    - "Uses python3 for YAML parsing (consistent with rest of codebase)"
+    - "Validation must complete in under 2 seconds regardless of profile chain length"
+
+testing_requirements:
+  unit_tests: true
+  integration_tests: false
+  e2e_tests: true
+  test_scenarios:
+    - "Valid profile: validation passes and provisioning runs"
+    - "Missing 'profile' key: exits 1 before installing"
+    - "Invalid extends reference: exits 1 with named missing profile"
+    - "Circular extends: exits 1 with cycle printed"
+    - "Non-list package value: exits 1 with field name"
+    - "Multiple errors reported together"
+    - "--validate-only exits 0 on valid profile"
+    - "--validate-only exits 1 on invalid profile"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    Validation is read-only. No rollback needed.
+    If validation is too strict and blocks a valid config, the validate_profiles()
+    function can be temporarily bypassed with --skip-validation (escape hatch).

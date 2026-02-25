@@ -1,6 +1,6 @@
 # Contributing Guide
 
-Thank you for your interest in contributing! This repository follows a **spec-based development** workflow where features are defined through formal specifications before implementation.
+This repository uses **Specification-Driven Development (SDD)** — all changes to provisioning behaviour start with a formal spec before any code is written.
 
 ## Table of Contents
 
@@ -14,20 +14,21 @@ Thank you for your interest in contributing! This repository follows a **spec-ba
 
 ### Prerequisites
 
-- Git
-- Your language-specific toolchain
-- [yq](https://github.com/mikefarah/yq) (for YAML processing)
-- [Claude Code CLI](https://github.com/anthropics/claude-code) (optional, for local spec processing)
+- Ubuntu 22.04+
+- bash 5.x
+- git
+- python3 (for YAML parsing — present by default on Ubuntu 22.04)
+- Docker (optional, for smoke testing)
 
 ### Setup
 
-1. Fork and clone the repository
-2. Install dependencies for your language/framework
-3. Review the existing specifications in `specs/`
+```bash
+git clone <repo-url> ~/dotfiles
+cd ~/dotfiles
+./install.sh --profile base
+```
 
 ## Development Workflow
-
-This project uses **Specification-Driven Development (SDD)**:
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -36,173 +37,149 @@ This project uses **Specification-Driven Development (SDD)**:
 └─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
 ```
 
-### 1. Propose a Feature
+### 1. Propose a Change
 
-Before writing code, create a specification:
+Before writing any shell scripts or modifying profile YAMLs, create a specification:
 
 1. Copy `specs/features/_template.yaml` to `specs/features/FEAT-XXXX-your-feature.yaml`
-2. Fill out all required sections
-3. Submit a PR with your spec for review
+2. Fill out all required sections (metadata, description, acceptance_criteria)
+3. Submit a PR with only the spec for review
 
 ### 2. Spec Review
 
-- Specs are reviewed by the architecture team
-- Acceptance criteria must be clear and testable
-- Technical requirements must be feasible
-- Once approved, status changes to `approved`
+- Acceptance criteria must be clear, specific, and testable
+- Technical requirements must be achievable in bash on Ubuntu 22.04
+- Once approved, `status` changes to `approved` in both the spec file and `specs.config.yaml`
 
 ### 3. Implementation
 
-Implementation can happen in two ways:
+Create a feature branch and implement all acceptance criteria:
 
-**Automated (via Claude Code):**
-- Approved specs in `specs.config.yaml` with `auto_implement: true` are processed automatically
-- Creates a feature branch and PR
-
-**Manual:**
-- Create a feature branch: `git checkout -b spec/FEAT-XXXX`
-- Implement all acceptance criteria
-- Write tests for each criterion
-- Submit PR referencing the spec
+```bash
+git checkout -b spec/FEAT-XXXX
+# implement the spec
+# write/update tests
+git push -u origin spec/FEAT-XXXX
+# open PR
+```
 
 ### 4. Code Review & Merge
 
-- All acceptance criteria must pass
-- Tests must pass
-- Code review approval required
-- Spec status updated to `implemented`
+- All acceptance criteria verified
+- Tests passing (smoke test in Docker at minimum)
+- Code follows patterns in `.ai/architecture/PATTERNS.md`
+- Spec status updated to `implemented` after merge
 
 ## Writing Specifications
 
-### Feature Specs
-
-Location: `specs/features/`
+Location: `specs/features/FEAT-XXXX-description.yaml`
 
 ```yaml
 metadata:
-  id: "FEAT-0001"           # Unique identifier
-  title: "Feature Name"      # Short title
-  version: "1.0.0"          # Spec version
-  status: "draft"           # draft → review → approved → implemented
-  priority: "medium"        # critical | high | medium | low
+  id: "FEAT-0002"
+  title: "Multi-Type Package Support"
+  version: "1.0.0"
+  status: "draft"         # draft → review → approved → implemented
+  priority: "high"        # critical | high | medium | low
 
 description:
-  summary: "One-line description"
+  summary: "One or two sentence description."
   problem_statement: "What problem does this solve?"
   proposed_solution: "How does it solve the problem?"
 
 acceptance_criteria:
   - id: "AC-001"
-    given: "Precondition"
-    when: "Action"
-    then: "Expected result"
+    given: "A profile YAML with a snap package listed"
+    when: "./install.sh --profile base is run"
+    then: "The snap package is installed via snap install"
 ```
 
 ### Acceptance Criteria Guidelines
 
-Write clear, testable criteria using Gherkin format:
+Write concrete, testable criteria. Good:
 
-**Good:**
 ```yaml
 - id: "AC-001"
-  given: "A user is logged in with valid credentials"
-  when: "They click the 'Export' button"
-  then: "A CSV file downloads containing their data"
+  given: "A clean Ubuntu 22.04 system with profiles/base.yaml listing 'curl' under apt"
+  when: "./install.sh --profile base is run"
+  then: "curl is installed and 'curl --version' exits 0"
 ```
 
-**Bad:**
+Bad (too vague):
+
 ```yaml
 - id: "AC-001"
-  given: "User exists"
-  when: "They do export"
+  given: "A machine"
+  when: "Script runs"
   then: "It works"
 ```
 
-### API Specs
-
-Location: `specs/api/`
-
-Use OpenAPI 3.1 format. See `specs/api/_template.openapi.yaml` for reference.
-
 ## Code Standards
 
-### General Principles
+All code must follow `.ai/architecture/PATTERNS.md`. Key rules:
 
-1. **Follow existing patterns** - Match the codebase style
-2. **Keep it simple** - Implement what the spec requires, nothing more
-3. **Test everything** - Each acceptance criterion needs tests
-4. **Document decisions** - If spec is ambiguous, document your interpretation
+1. **`set -euo pipefail`** in every script — no exceptions
+2. **Named functions** — no inline logic at the script body level
+3. **`local` variables** — never mutate globals inside functions
+4. **Idempotency** — check state before acting; safe to run twice
+5. **`log_info` / `log_warn` / `log_error`** — never bare `echo`
+6. **Package lists in YAML** — never hardcode packages in shell scripts
 
 ### Commit Messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat(FEAT-0001): Add user export functionality
+feat(FEAT-0002): Add snap and flatpak package type support
 
-- Implement CSV export for user data
-- Add tests for AC-001, AC-002, AC-003
+- Implement install_snap_package() in scripts/packages.sh
+- Implement install_flatpak_package() in scripts/packages.sh
+- Add snap/flatpak lists to profile YAML schema
+- Tests: AC-001 through AC-004
 
-Closes #123
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
-Types:
-- `feat`: New feature (from spec)
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `test`: Test additions/changes
-- `refactor`: Code refactoring
-- `chore`: Maintenance tasks
+Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
 ### Branch Naming
 
 ```
-spec/FEAT-0001           # Feature implementation
-spec/API-0001            # API implementation
-fix/issue-123            # Bug fixes
-docs/update-readme       # Documentation
+spec/FEAT-0002        # Feature implementation
+fix/dotfile-symlink   # Bug fixes
+docs/update-readme    # Documentation only
 ```
 
 ## Pull Request Process
 
-### For Specifications
+### For Specifications (spec PR)
 
-1. Create spec file following the template
-2. Validate against schema: `scripts/ingest-spec.sh --validate specs/features/your-spec.yaml`
-3. Open PR with title: `spec(FEAT-XXXX): Your Feature Title`
-4. Request review from architecture team
-5. Address feedback and iterate
+1. Create the spec YAML file
+2. Open PR with title: `spec(FEAT-XXXX): Your Feature Title`
+3. Request review — discussion happens on the PR
 
-### For Implementation
+### For Implementations (code PR)
 
-1. Reference the spec in PR description
-2. Include checklist of acceptance criteria
-3. Ensure all tests pass
-4. Request review from code owners
+1. Reference the spec: `Implements: specs/features/FEAT-XXXX-...yaml`
+2. Include acceptance criteria checklist
+3. Confirm smoke test passes
 
-### PR Template
+PR description template:
 
 ```markdown
 ## Specification
-Implements: `specs/features/FEAT-XXXX.yaml`
+Implements: `specs/features/FEAT-XXXX-description.yaml`
 
 ## Acceptance Criteria
 - [ ] AC-001: Description
 - [ ] AC-002: Description
 
 ## Testing
-- [ ] Unit tests added
-- [ ] Integration tests added
-- [ ] All tests passing
+- [ ] Smoke test: `docker run ... ./install.sh --profile base` passes
+- [ ] Idempotency: second run exits 0
 
 ## Checklist
-- [ ] Code follows project conventions
-- [ ] Self-review completed
-- [ ] Documentation updated (if needed)
+- [ ] Follows patterns in .ai/architecture/PATTERNS.md
+- [ ] set -euo pipefail in all modified scripts
+- [ ] No hardcoded package lists in shell scripts
 ```
-
-## Questions?
-
-- Check existing specs for examples
-- Review closed PRs for patterns
-- Open a discussion for clarification

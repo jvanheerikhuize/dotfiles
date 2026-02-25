@@ -1,0 +1,104 @@
+# Feature Specification: Nerd Font Installation
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0010"
+  title: "Nerd Font Installation"
+  version: "1.0.0"
+  status: "draft"
+  priority: "low"
+  author: "Jerry"
+  created_at: "2026-02-25"
+  updated_at: "2026-02-25"
+  tags:
+    - fonts
+    - desktop
+    - terminal
+
+description:
+  summary: |
+    Add a 'fonts' section to desktop/dev profile YAML and a corresponding
+    install_font() function that downloads and installs Nerd Fonts into
+    ~/.local/share/fonts/ and refreshes the font cache.
+
+  problem_statement: |
+    Many terminal tools (Starship prompt, Neovim with icons, powerline-style prompts)
+    require a Nerd Font to render correctly. There is currently no mechanism in the
+    provisioning system to declare or install fonts — they must be installed manually
+    from the Nerd Fonts GitHub releases page.
+
+  proposed_solution: |
+    Extend the profile YAML schema with a top-level 'fonts' section:
+      fonts:
+        nerd_fonts:
+          - JetBrainsMono
+          - FiraCode
+    A scripts/fonts.sh script downloads the latest release zip for each named Nerd
+    Font from the official GitHub releases API, extracts .ttf files to
+    ~/.local/share/fonts/<FontName>/, and runs fc-cache -fv to refresh the font cache.
+    Idempotency: checks if any .ttf file for the font already exists before downloading.
+
+  out_of_scope:
+    - "System-wide font installation (requires root; ~/.local/share/fonts/ is user-scoped)"
+    - "Non-Nerd-Font fonts"
+    - "Font configuration for specific applications (e.g. setting the terminal font)"
+
+  dependencies:
+    - "FEAT-0001: Core provisioning engine"
+    - "FEAT-0002: Multi-type package support (wget or curl for downloads)"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "A desktop or dev profile YAML with fonts.nerd_fonts: [JetBrainsMono]"
+    when: "./install.sh --profile desktop is run"
+    then: "JetBrainsMono Nerd Font .ttf files are downloaded and placed in ~/.local/share/fonts/JetBrainsMono/"
+    and:
+      - "fc-cache -fv is run after installation"
+      - "'fc-list | grep JetBrainsMono' returns at least one result"
+
+  - id: "AC-002"
+    given: "JetBrainsMono is already installed in ~/.local/share/fonts/"
+    when: "./install.sh is run again"
+    then: "Font download is skipped with log_info: 'Font already installed: JetBrainsMono'"
+
+  - id: "AC-003"
+    given: "A base or server profile with no fonts section"
+    when: "./install.sh --profile base is run"
+    then: "No font installation occurs and no font-related output is shown"
+
+  - id: "AC-004"
+    given: "An invalid font name in the profile"
+    when: "./install.sh is run"
+    then: "The script exits non-zero with: 'Font not found in Nerd Fonts releases: <name>'"
+
+  - id: "AC-005"
+    given: "Multiple fonts declared in the profile"
+    when: "./install.sh is run"
+    then: "Each font is installed sequentially with its own log_step"
+
+technical_requirements:
+  constraints:
+    - "Downloads from github.com/ryanoasis/nerd-fonts/releases — requires internet"
+    - "Fonts installed to ~/.local/share/fonts/ (user-scoped, no sudo required)"
+    - "Temp zip files downloaded to mktemp directory and cleaned up via trap on EXIT"
+    - "Font name must exactly match a release asset name from the Nerd Fonts project"
+
+  security:
+    - "Downloads over HTTPS only"
+    - "No checksum verification in v1 (noted as known limitation; future spec to add)"
+
+testing_requirements:
+  unit_tests: false
+  integration_tests: false
+  e2e_tests: true
+  test_scenarios:
+    - "JetBrainsMono downloaded and fc-list shows it after installation"
+    - "Second run skips download (idempotent)"
+    - "Profile without fonts section produces no font output"
+    - "Invalid font name exits non-zero"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    Remove installed fonts: rm -rf ~/.local/share/fonts/<FontName>/
+    Then refresh cache: fc-cache -fv

@@ -1,0 +1,190 @@
+# Feature Specification: Core Provisioning Engine
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0001"
+  title: "Core Provisioning Engine"
+  version: "1.0.0"
+  status: "approved"
+  priority: "critical"
+  author: "Jerry"
+  created_at: "2026-02-25"
+  updated_at: "2026-02-25"
+  tags:
+    - provisioning
+    - bash
+    - packages
+    - profiles
+
+description:
+  summary: |
+    A single entrypoint shell script (install.sh) that reads a declarative YAML profile,
+    installs packages via apt, and provides the skeleton for the profile inheritance system
+    and dotfile symlinking.
+
+  problem_statement: |
+    After a fresh Ubuntu install (Stage 1 via Autoinstall.yaml), the system has only a
+    minimal base. There is no automated, repeatable way to:
+    - Install required tools and packages
+    - Apply personal configuration (dotfiles)
+    - Express "which packages go on which kind of machine" declaratively
+    Without this, every new machine requires manual setup — slow, error-prone, and inconsistent.
+
+  proposed_solution: |
+    A bash script (install.sh) serves as the single entrypoint. It:
+    1. Accepts a --profile flag (e.g. base, desktop, server, dev) defaulting to "base"
+    2. Loads the corresponding profiles/<profile>.yaml manifest
+    3. Profiles can extend a parent profile via an "extends" key, which is merged before install
+    4. Installs apt packages listed in the profile
+    5. Applies dotfiles by symlinking from dotfiles/ into $HOME (unless --skip-dotfiles)
+    6. Prints clear progress and exits non-zero on any failure
+    All scripts use `set -euo pipefail`. Running install.sh multiple times is safe (idempotent).
+
+  out_of_scope:
+    - "snap, flatpak, deb, and custom script package types (covered in FEAT-0002)"
+    - "Shell/terminal dotfiles content (e.g. .bashrc contents) — only the symlinking mechanism"
+    - "CI/CD pipeline for automated provisioning"
+    - "Windows or macOS support"
+
+  dependencies:
+    - "Stage 1: Ubuntu 22.04+ installed and booted"
+    - "git (to clone this repo) — assumed present post Stage 1"
+    - "bash 5.x"
+    - "python3 or yq for YAML parsing (spec must choose one)"
+
+technical_requirements:
+  constraints:
+    - "Must run on Ubuntu 22.04+ with bash 5.x"
+    - "Must be idempotent — safe to run multiple times without side effects"
+    - "Must use set -euo pipefail in all scripts"
+    - "YAML parsing must not require pre-installing a non-standard tool; use python3 (present by default on Ubuntu 22.04) or bootstrap yq"
+    - "Must not require internet for the script logic itself — only package installs do"
+    - "All package lists live in YAML profile files, not hardcoded in scripts"
+    - "Dotfile symlinks must not overwrite existing files without --force flag"
+
+  security:
+    - "sudo is used only for apt operations, not for the whole script"
+    - "No credentials or secrets are stored in the repo"
+    - "Dotfile symlinks point into the repo; no copying of sensitive files"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "A fresh Ubuntu 22.04+ system with git and this repo cloned to ~/dotfiles"
+    when: "./install.sh is run with no arguments"
+    then: "The 'base' profile is loaded and all apt packages listed in profiles/base.yaml are installed"
+    and:
+      - "The script prints a clear header showing which profile is active"
+      - "Each package install step prints the package name and outcome (installed / already present)"
+      - "The script exits 0 on success"
+
+  - id: "AC-002"
+    given: "A system with profiles/desktop.yaml that has 'extends: base'"
+    when: "./install.sh --profile desktop is run"
+    then: "Both the base profile's packages and the desktop profile's packages are installed"
+    and:
+      - "base packages are processed first, then desktop-specific packages"
+      - "The effective merged package list is logged before installation begins"
+
+  - id: "AC-003"
+    given: "install.sh has already been run successfully once"
+    when: "./install.sh is run again with the same profile"
+    then: "The script completes successfully without errors or duplicate installs"
+    and:
+      - "Already-installed apt packages are skipped gracefully (apt handles this natively)"
+      - "Existing correct symlinks are left untouched"
+      - "Exit code is 0"
+
+  - id: "AC-004"
+    given: "A dotfiles/ directory exists in the repo root with at least one file (e.g. dotfiles/.bashrc)"
+    when: "./install.sh is run"
+    then: "A symlink is created at $HOME/.bashrc pointing to the repo's dotfiles/.bashrc"
+    and:
+      - "If $HOME/.bashrc does not exist, the symlink is created"
+      - "If $HOME/.bashrc already exists as a symlink to the correct target, it is left untouched"
+      - "If $HOME/.bashrc exists as a regular file, the script warns and skips (does not overwrite)"
+      - "Running with --force replaces the existing file with the symlink after backing it up to $HOME/.bashrc.bak"
+
+  - id: "AC-005"
+    given: "A profile YAML references an apt package that does not exist in the apt registry"
+    when: "./install.sh --profile base is run"
+    then: "The script exits non-zero with a clear error message naming the failed package"
+    and:
+      - "Packages that were successfully installed before the failure remain installed"
+      - "The error message includes the package name and the apt error output"
+
+  - id: "AC-006"
+    given: "install.sh is run with --skip-dotfiles"
+    when: "The provisioning run completes"
+    then: "Packages are installed but no symlinks are created or modified"
+
+  - id: "AC-007"
+    given: "install.sh is run with --dotfiles-only"
+    when: "The provisioning run completes"
+    then: "Dotfile symlinks are applied but no package installation is performed"
+
+  - id: "AC-008"
+    given: "install.sh is run with --help"
+    when: "The script is invoked"
+    then: "A usage message is printed showing all supported flags and their defaults, then exits 0"
+
+technical_notes: |
+  ## File Structure to Create
+
+  ```
+  install.sh                    # Entrypoint (executable)
+  profiles/
+  ├── base.yaml                 # Base profile
+  ├── desktop.yaml              # Desktop profile (extends: base)
+  ├── server.yaml               # Server profile (extends: base)
+  └── dev.yaml                  # Dev profile (extends: desktop)
+  dotfiles/
+  └── .gitkeep                  # Placeholder; real dotfiles added in later specs
+  scripts/
+  ├── utils.sh                  # Shared: log(), error(), require_cmd()
+  ├── packages.sh               # Package install dispatcher (apt only in this spec)
+  └── dotfiles.sh               # Symlink management
+  ```
+
+  ## Profile YAML Schema (for this spec)
+
+  ```yaml
+  # profiles/base.yaml
+  profile:
+    name: base
+    extends: null         # or a profile name string
+
+  packages:
+    apt:
+      - curl
+      - git
+      - vim
+  ```
+
+  ## YAML Parsing Strategy
+  Use python3 (available by default on Ubuntu 22.04) with a minimal inline parser
+  or install `yq` via apt as the first step of install.sh.
+  Recommendation: use `python3 -c` with a one-liner to extract values — keeps zero
+  bootstrap dependencies.
+
+testing_requirements:
+  unit_tests: true
+  integration_tests: false
+  e2e_tests: true
+  performance_tests: false
+  test_scenarios:
+    - "Run install.sh --profile base on a clean Ubuntu 22.04 Docker container — all packages install"
+    - "Run install.sh twice — second run exits 0 with no errors"
+    - "Run install.sh --profile desktop — base + desktop packages all installed"
+    - "Dotfile symlink created when target does not exist"
+    - "Dotfile symlink skipped when already correct"
+    - "Dotfile skipped with warning when file exists (no --force)"
+    - "Dotfile replaced with backup when --force is passed"
+    - "install.sh --help prints usage and exits 0"
+    - "install.sh with bad profile name exits non-zero with clear message"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    This script only installs packages and creates symlinks.
+    Rollback: manually remove installed packages and delete symlinks.
+    No system configuration files are modified by this spec.
