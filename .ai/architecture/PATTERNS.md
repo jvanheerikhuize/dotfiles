@@ -421,9 +421,51 @@ fi
 
 ---
 
-## 14. Revision History
+## 14. Smoke Test Pattern
+
+Test scripts live in `tests/smoke/tests/`. Each script:
+1. Sources `../helpers.sh`
+2. Runs `install.sh` with appropriate flags (full, `--skip-dotfiles`, or `--dotfiles-only`)
+3. Calls `assert_*` helpers for each condition
+4. Calls `finish` to print summary and exit
+
+```bash
+#!/usr/bin/env bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+
+source "${SCRIPT_DIR}/../helpers.sh"
+
+# Provision
+bash "${REPO_ROOT}/install.sh" --profile base --dotfiles-only
+
+# Assert
+assert_symlink "${HOME}/.bashrc" "${REPO_ROOT}/dotfiles/.bashrc"
+assert_git_config "core.editor" "vim"
+assert_cmd_success "bash --login exits 0" bash --login -c exit
+
+finish   # prints summary; exits 0 or 1
+```
+
+Available assertions (all defined in `tests/smoke/helpers.sh`):
+
+| Helper | What it checks |
+|--------|---------------|
+| `assert_cmd_success <desc> <cmd...>` | Command exits 0 |
+| `assert_cmd_fails <desc> <cmd...>` | Command exits non-zero |
+| `assert_pkg_installed <pkg>` | `dpkg -s <pkg>` exits 0 |
+| `assert_file_exists <path>` | `test -e <path>` |
+| `assert_symlink <link> <target>` | `readlink <link>` == `<target>` |
+| `assert_git_config <key> <value>` | `git config --global <key>` == `<value>` |
+
+---
+
+## 15. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-02-25 | Jerry | Initial bash patterns for dotfiles provisioning |
 | 1.1.0 | 2026-02-25 | Jerry | FEAT-0003: added dotfile conventions section |
+| 1.2.0 | 2026-02-25 | Jerry | FEAT-0004: added smoke test pattern section |

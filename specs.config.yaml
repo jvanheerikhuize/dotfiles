@@ -89,7 +89,7 @@ specifications:
 
   - id: "FEAT-0004"
     file: "specs/features/FEAT-0004-smoke-test-suite.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "medium"
     assignee: "Jerry"
