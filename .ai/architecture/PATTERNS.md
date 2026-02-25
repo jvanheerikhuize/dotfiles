@@ -395,8 +395,35 @@ load_profile() {
 
 ---
 
-## 13. Revision History
+## 13. Dotfile Conventions
+
+Rules that apply to all files in `dotfiles/`:
+
+**Non-interactive guard in `.bashrc`** — First real logic must return early for non-interactive shells:
+
+```bash
+[[ $- == *i* ]] || return
+```
+
+This prevents `.bashrc` from breaking scripts that accidentally source it.
+
+**No user identity in `.gitconfig`** — `user.name` and `user.email` are machine-specific and set by FEAT-0008. The repo `.gitconfig` must never include them.
+
+**No undeclared tool dependencies** — Every tool referenced in dotfiles must exist on stock Ubuntu 22.04. Guard optional tools:
+
+```bash
+if command -v dircolors &>/dev/null; then
+  eval "$(dircolors -b)"
+fi
+```
+
+**Extensively commented** — Every non-obvious setting must have an inline comment explaining what it does and why.
+
+---
+
+## 14. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0.0 | 2026-02-25 | Jerry | Initial bash patterns for dotfiles provisioning |
+| 1.1.0 | 2026-02-25 | Jerry | FEAT-0003: added dotfile conventions section |

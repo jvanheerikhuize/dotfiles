@@ -76,7 +76,7 @@ specifications:
 
   - id: "FEAT-0003"
     file: "specs/features/FEAT-0003-base-shell-dotfiles.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"
