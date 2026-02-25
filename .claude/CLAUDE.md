@@ -44,16 +44,8 @@ This is a **language-agnostic, platform-agnostic template repository** designed 
 │   └── Invoke-SpecIngestion.ps1  # PowerShell script
 │
 ├── .github/
-│   ├── workflows/           # CI/CD workflows
-│   │   ├── spec-ingestion.yml
-│   │   ├── validate-specs.yml
-│   │   └── notify-integrations.yml
-│   └── ISSUE_TEMPLATE/      # Issue templates
-│
-├── docs/
-│   ├── spec-based-development.md
-│   ├── integrations.md
-│   └── runbooks/            # Operational procedures
+│   ├── ISSUE_TEMPLATE/      # Issue templates
+│   └── pull_request_template.md
 │
 ├── specs.config.yaml        # Central spec registry & config
 ├── .claude/                 # Claude Code configuration

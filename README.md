@@ -121,7 +121,7 @@ packages:
 
 This repo uses **Specification-Driven Development** — all changes to provisioning behaviour start with a spec in `specs/features/`.
 
-See [specs/features/FEAT-0001-core-provisioning-engine.yaml](specs/features/FEAT-0001-core-provisioning-engine.yaml) for the first feature spec and [docs/spec-based-development.md](docs/spec-based-development.md) for the workflow.
+See [specs/features/FEAT-0001-core-provisioning-engine.yaml](specs/features/FEAT-0001-core-provisioning-engine.yaml) for the first feature spec and [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
 
 ### Adding a Package
 
