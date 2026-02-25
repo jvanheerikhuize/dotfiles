@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dotfiles — Stage 2 Ubuntu provisioner
-# Usage: ./install.sh [--profile PROFILE] [--skip-dotfiles] [--dotfiles-only] [--force] [--help]
+# Usage: ./install.sh [--profile PROFILE] [--skip-dotfiles] [--dotfiles-only] [--force] [--dry-run] [--validate-only] [--help]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,6 +8,7 @@ PROFILES_DIR="${SCRIPT_DIR}/profiles"
 DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
 
 source "${SCRIPT_DIR}/src/utils.sh"
+source "${SCRIPT_DIR}/src/validate.sh"
 source "${SCRIPT_DIR}/src/packages.sh"
 source "${SCRIPT_DIR}/src/dotfiles.sh"
 
@@ -19,6 +20,7 @@ SKIP_DOTFILES=false
 DOTFILES_ONLY=false
 FORCE=false
 DRY_RUN=false
+VALIDATE_ONLY=false
 
 # Global arrays populated by load_profile()
 APT_PACKAGES=()
@@ -43,6 +45,7 @@ Options:
   --dotfiles-only      Apply dotfiles only; skip package installation
   --force              Replace existing dotfiles (backs up originals to .bak)
   --dry-run            Preview what would be installed/linked; make no changes
+  --validate-only      Validate profile YAML structure only; skip all installs and dotfiles
   --help               Show this help and exit
 
 Profiles available: $(ls "${PROFILES_DIR}"/*.yaml 2>/dev/null | xargs -I{} basename {} .yaml | tr '\n' ' ')
@@ -53,6 +56,7 @@ Examples:
   ./install.sh --profile base --force      # Apply base, replace conflicting dotfiles
   ./install.sh --dotfiles-only             # Only symlink dotfiles, skip packages
   ./install.sh --profile dev --dry-run     # Preview what dev profile would do
+  ./install.sh --profile base --validate-only  # Validate base profile YAML
 
 EOF
 }
@@ -82,6 +86,10 @@ parse_args() {
         ;;
       --dry-run)
         DRY_RUN=true
+        shift
+        ;;
+      --validate-only)
+        VALIDATE_ONLY=true
         shift
         ;;
       --help|-h)
@@ -217,6 +225,15 @@ main() {
   [[ "$SKIP_DOTFILES" == "true" ]] && log_info "Mode:     --skip-dotfiles"
   [[ "$DOTFILES_ONLY" == "true" ]] && log_info "Mode:     --dotfiles-only"
   [[ "$DRY_RUN" == "true" ]]       && log_info "Mode:     --dry-run (no changes will be made)"
+  [[ "$VALIDATE_ONLY" == "true" ]] && log_info "Mode:     --validate-only"
+
+  # Validate profile YAML structure (before loading or installing)
+  log_step "Validating profile"
+  validate_profiles "$PROFILE"
+  if [[ "$VALIDATE_ONLY" == "true" ]]; then
+    log_info "Validation passed"
+    exit 0
+  fi
 
   # Load and merge profile chain
   log_step "Loading profile"

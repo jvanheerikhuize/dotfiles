@@ -40,6 +40,8 @@ Scenarios:
   base-bash-login       bash --login exits 0; aliases available           [profile: base]
   base-idempotency      Second run of install.sh exits 0                  [profile: base]
   base-dry-run          --dry-run makes no changes and exits 0            [profile: base]
+  validate-only         --validate-only exits 0 and prints Validation passed [profile: base]
+  validate-invalid      Invalid YAML exits 1 with correct error messages
 
 EOF
 }
@@ -80,6 +82,8 @@ SCENARIO_DEFS=(
   "base-bash-login|base|test-base-bash-login.sh"
   "base-idempotency|base|test-base-idempotency.sh"
   "base-dry-run|base|test-base-dry-run.sh"
+  "validate-only|base|test-validate-only.sh"
+  "validate-invalid|all|test-validate-invalid.sh"
 )
 
 # ---------------------------------------------------------------------------
