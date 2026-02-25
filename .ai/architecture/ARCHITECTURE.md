@@ -63,7 +63,7 @@
 ```
 install.sh (entrypoint)
 │
-├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --help)
+├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --validate-only, --help)
 │
 ├── src/utils.sh
 │   ├── log_info()      print timestamped info line
@@ -71,6 +71,9 @@ install.sh (entrypoint)
 │   ├── log_error()     print error and exit 1
 │   ├── log_dry_run()   print [DRY RUN] preview line (FEAT-0005)
 │   └── require_cmd()   assert a command exists or exit
+│
+├── src/validate.sh (FEAT-0006)
+│   └── validate_profiles()  python3 walk of extends chain; collect all errors
 │
 ├── profile loader
 │   ├── load profiles/<profile>.yaml
@@ -96,6 +99,7 @@ install.sh (entrypoint)
 |-----------|------|---------|
 | Entrypoint | `install.sh` | Arg parsing, orchestration, profile loading |
 | Utilities | `src/utils.sh` | Logging, guards, shared helpers |
+| Validator | `src/validate.sh` | Pre-install YAML structure validation (FEAT-0006) |
 | Package installer | `src/packages.sh` | One function per package type |
 | Dotfile manager | `src/dotfiles.sh` | Symlink creation, collision handling |
 | Profile manifests | `profiles/*.yaml` | Declarative package lists per profile |
@@ -231,7 +235,9 @@ tests/smoke/
     ├── test-base-dotfiles.sh     # Symlinks + git config + aliases + live symlink
     ├── test-base-bash-login.sh   # bash --login exits 0; bash -n syntax checks
     ├── test-base-idempotency.sh  # Second run exits 0; symlinks still correct
-    └── test-base-dry-run.sh      # --dry-run: no packages installed, no symlinks created
+    ├── test-base-dry-run.sh      # --dry-run: no packages installed, no symlinks created
+    ├── test-validate-only.sh     # --validate-only: exits 0, "Validation passed", no changes
+    └── test-validate-invalid.sh  # invalid YAML: exits 1 with correct error messages
 ```
 
 ### 6.2 Test Runner Behaviour
@@ -317,3 +323,4 @@ See `../decisions/` for ADRs:
 | 1.2.0 | 2026-02-25 | Jerry | FEAT-0003: documented actual dotfiles and dotfile conventions |
 | 1.3.0 | 2026-02-25 | Jerry | FEAT-0004: added testing architecture section (Docker smoke tests) |
 | 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run() to utils diagram; --dry-run to arg list; dry-run test to smoke suite |
+| 1.5.0 | 2026-02-25 | Jerry | FEAT-0006: added src/validate.sh to component diagram; --validate-only to arg list; validation tests to smoke suite |

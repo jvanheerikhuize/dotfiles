@@ -6,7 +6,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.4.0 |
+| Version | 1.5.0 |
 | Last Updated | 2026-02-25 |
 
 ---
@@ -114,6 +114,7 @@ SKIP_DOTFILES=false
 DOTFILES_ONLY=false
 FORCE=false
 DRY_RUN=false
+VALIDATE_ONLY=false
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
@@ -138,6 +139,10 @@ parse_args() {
         DRY_RUN=true
         shift
         ;;
+      --validate-only)
+        VALIDATE_ONLY=true
+        shift
+        ;;
       --help)
         usage
         exit 0
@@ -159,6 +164,7 @@ Options:
   --dotfiles-only      Apply dotfiles only
   --force              Replace existing dotfiles (backs up to .bak)
   --dry-run            Preview what would be installed/linked; make no changes
+  --validate-only      Validate profile YAML structure; skip installs and dotfiles
   --help               Show this help
 EOF
 }
@@ -528,7 +534,43 @@ link_dotfile() {
 
 ---
 
-## 16. Revision History
+## 16. Profile Validation Pattern (FEAT-0006)
+
+`validate_profiles()` in `src/validate.sh` runs a single Python pass over the full extends chain before any installs. It collects all errors, then prints them all to stderr and exits 1 — never failing on the first error.
+
+**What it checks:**
+- `profile.name` key is present in every YAML file in the chain
+- `extends` references an existing profile file
+- No circular extends chains (detected by tracking the walk path)
+- Every `packages.<type>` value is a list (not a scalar or mapping)
+
+**Usage in install.sh:**
+```bash
+# Called before load_profile — validate structure before doing any work
+validate_profiles "$PROFILE"
+if [[ "$VALIDATE_ONLY" == "true" ]]; then
+  log_info "Validation passed"
+  exit 0
+fi
+```
+
+**Error message format** (printed to stderr, one per line):
+```
+Validation error in profiles/base.yaml: missing required key: profile
+Validation error in profiles/base.yaml: packages.apt must be a list
+Validation error: profile "missingparent" not found (referenced by "desktop")
+Validation error: circular extends detected: desktop → base → desktop
+```
+
+**Rules:**
+- Validation runs before `load_profile()` — ensures no partial-provisioning on a bad config
+- `PROFILES_DIR` global must be set before calling (set at top of `install.sh`)
+- All errors collected before printing — never exits on the first error
+- YAML parsing via `python3` inline heredoc (consistent with `src/utils.sh` pattern)
+
+---
+
+## 17. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -537,3 +579,4 @@ link_dotfile() {
 | 1.2.0 | 2026-02-25 | Jerry | FEAT-0004: added smoke test pattern section |
 | 1.3.0 | 2026-02-25 | Jerry | Bug fixes: document return 0 guard and --force requirement in smoke tests |
 | 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run to logging section; --dry-run to arg parsing; DRY_RUN pattern section |
+| 1.5.0 | 2026-02-25 | Jerry | FEAT-0006: added --validate-only to arg parsing; validation pattern section |

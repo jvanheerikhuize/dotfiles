@@ -54,11 +54,13 @@
 - [x] FEAT-0003: Base shell dotfiles (.bashrc, .bash_aliases, .bash_profile, .gitconfig)
 - [x] FEAT-0004: Docker smoke test suite (tests/smoke/, .github/workflows/smoke-tests.yml)
 - [x] FEAT-0005: Dry-run mode (--dry-run flag in install.sh; DRY_RUN gates all mutations)
-- [ ] FEAT-0006 through FEAT-0014: Pending (see specs.config.yaml)
+- [x] FEAT-0006: Profile YAML validation (--validate-only flag; validate_profiles() in src/validate.sh)
+- [ ] FEAT-0007 through FEAT-0014: Pending (see specs.config.yaml)
 
 ### Recent Changes
 - 2026-02-25: Repository initialized; FEAT-0001 through FEAT-0004 implemented
 - 2026-02-25: FEAT-0005 implemented: --dry-run flag; DRY_RUN variable gates all mutating operations in packages.sh and dotfiles.sh
+- 2026-02-25: FEAT-0006 implemented: --validate-only flag; validate_profiles() catches missing keys, bad extends, circular refs, non-list package values before any installs
 
 ### Known Issues
 - None

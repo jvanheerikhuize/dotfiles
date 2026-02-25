@@ -114,7 +114,7 @@ specifications:
 
   - id: "FEAT-0006"
     file: "specs/features/FEAT-0006-profile-yaml-validation.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"
