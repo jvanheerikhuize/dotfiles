@@ -6,8 +6,11 @@
 # ---------------------------------------------------------------------------
 # Non-interactive guard
 # If this shell is not interactive (e.g. a script sourcing .bashrc), exit now.
+# Explicit 'return 0' is required: without it, return inherits the exit code
+# of the failed [[ ]] test (exit code 1), which propagates up through
+# .bash_profile and causes 'bash --login -c exit' to exit 1.
 # ---------------------------------------------------------------------------
-[[ $- == *i* ]] || return
+[[ $- == *i* ]] || return 0
 
 # ---------------------------------------------------------------------------
 # History
@@ -39,7 +42,7 @@ _ps1_time='\[\033[0;36m\]'          # cyan
 _ps1_userhost='\[\033[1;32m\]'      # bold green
 _ps1_path='\[\033[1;34m\]'          # bold blue
 
-PS1="${_ps1_time}[\t]${_ps1_reset} ${_ps1_userhost}\u@\h${_ps1_colour_reset}:${_ps1_path}\w${_ps1_colour_reset}\$ "
+PS1="${_ps1_time}[\t]${_ps1_colour_reset} ${_ps1_userhost}\u@\h${_ps1_colour_reset}:${_ps1_path}\w${_ps1_colour_reset}\$ "
 
 # Clean up PS1 helper vars
 unset _ps1_colour_reset _ps1_time _ps1_userhost _ps1_path
