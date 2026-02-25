@@ -1,0 +1,315 @@
+# Integration Notifications Workflow
+# Sends notifications to configured integrations on spec events
+#
+# This workflow is called by other workflows to send notifications
+# Configure integrations in specs.config.yaml
+
+name: Integration Notifications
+
+on:
+  workflow_call:
+    inputs:
+      event:
+        description: 'Event type (spec_approved, implementation_started, etc.)'
+        required: true
+        type: string
+      spec_id:
+        description: 'Specification ID'
+        required: true
+        type: string
+      spec_title:
+        description: 'Specification title'
+        required: false
+        type: string
+      spec_file:
+        description: 'Path to spec file'
+        required: false
+        type: string
+      status:
+        description: 'Status (success, failure)'
+        required: false
+        type: string
+        default: 'success'
+      pr_number:
+        description: 'Pull request number'
+        required: false
+        type: string
+      pr_url:
+        description: 'Pull request URL'
+        required: false
+        type: string
+      error_message:
+        description: 'Error message if failed'
+        required: false
+        type: string
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
+      TEAMS_WEBHOOK_URL:
+        required: false
+      DISCORD_WEBHOOK_URL:
+        required: false
+      PAGERDUTY_ROUTING_KEY:
+        required: false
+      OPSGENIE_API_KEY:
+        required: false
+
+jobs:
+  load-config:
+    name: Load Integration Config
+    runs-on: ubuntu-latest
+    outputs:
+      slack_enabled: ${{ steps.config.outputs.slack_enabled }}
+      teams_enabled: ${{ steps.config.outputs.teams_enabled }}
+      discord_enabled: ${{ steps.config.outputs.discord_enabled }}
+      pagerduty_enabled: ${{ steps.config.outputs.pagerduty_enabled }}
+      opsgenie_enabled: ${{ steps.config.outputs.opsgenie_enabled }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Load config
+        id: config
+        run: |
+          # Check if integrations are enabled in specs.config.yaml
+          if [ -f specs.config.yaml ]; then
+            echo "slack_enabled=$(yq e '.integrations.slack.enabled // false' specs.config.yaml)" >> $GITHUB_OUTPUT
+            echo "teams_enabled=$(yq e '.integrations.teams.enabled // false' specs.config.yaml)" >> $GITHUB_OUTPUT
+            echo "discord_enabled=$(yq e '.integrations.discord.enabled // false' specs.config.yaml)" >> $GITHUB_OUTPUT
+            echo "pagerduty_enabled=$(yq e '.integrations.pagerduty.enabled // false' specs.config.yaml)" >> $GITHUB_OUTPUT
+            echo "opsgenie_enabled=$(yq e '.integrations.opsgenie.enabled // false' specs.config.yaml)" >> $GITHUB_OUTPUT
+          else
+            echo "slack_enabled=false" >> $GITHUB_OUTPUT
+            echo "teams_enabled=false" >> $GITHUB_OUTPUT
+            echo "discord_enabled=false" >> $GITHUB_OUTPUT
+            echo "pagerduty_enabled=false" >> $GITHUB_OUTPUT
+            echo "opsgenie_enabled=false" >> $GITHUB_OUTPUT
+          fi
+
+  notify-slack:
+    name: Notify Slack
+    needs: load-config
+    if: needs.load-config.outputs.slack_enabled == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Slack notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          # Determine emoji and color based on event and status
+          case "${{ inputs.event }}" in
+            "spec_approved")
+              EMOJI="✅"
+              COLOR="#36a64f"
+              TITLE="Spec Approved"
+              ;;
+            "implementation_started")
+              EMOJI="🚀"
+              COLOR="#439FE0"
+              TITLE="Implementation Started"
+              ;;
+            "implementation_completed")
+              EMOJI="🎉"
+              COLOR="#36a64f"
+              TITLE="Implementation Completed"
+              ;;
+            "implementation_failed")
+              EMOJI="❌"
+              COLOR="#E01E5A"
+              TITLE="Implementation Failed"
+              ;;
+            "pr_created")
+              EMOJI="📝"
+              COLOR="#439FE0"
+              TITLE="PR Created"
+              ;;
+            *)
+              EMOJI="📋"
+              COLOR="#808080"
+              TITLE="${{ inputs.event }}"
+              ;;
+          esac
+
+          # Build message
+          MESSAGE="$EMOJI *$TITLE*\n"
+          MESSAGE+="• *Spec ID:* ${{ inputs.spec_id }}\n"
+
+          if [ -n "${{ inputs.spec_title }}" ]; then
+            MESSAGE+="• *Title:* ${{ inputs.spec_title }}\n"
+          fi
+
+          if [ -n "${{ inputs.pr_url }}" ]; then
+            MESSAGE+="• *PR:* <${{ inputs.pr_url }}|#${{ inputs.pr_number }}>\n"
+          fi
+
+          if [ "${{ inputs.status }}" == "failure" ] && [ -n "${{ inputs.error_message }}" ]; then
+            MESSAGE+="• *Error:* ${{ inputs.error_message }}\n"
+          fi
+
+          # Send to Slack
+          curl -X POST -H 'Content-type: application/json' \
+            --data "{
+              \"attachments\": [{
+                \"color\": \"$COLOR\",
+                \"text\": \"$MESSAGE\",
+                \"footer\": \"Spec-Based Development\",
+                \"ts\": $(date +%s)
+              }]
+            }" \
+            "$SLACK_WEBHOOK_URL"
+
+  notify-teams:
+    name: Notify Teams
+    needs: load-config
+    if: needs.load-config.outputs.teams_enabled == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Teams notification
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        run: |
+          # Determine color based on event
+          case "${{ inputs.event }}" in
+            "implementation_completed"|"spec_approved")
+              COLOR="00FF00"
+              ;;
+            "implementation_failed")
+              COLOR="FF0000"
+              ;;
+            *)
+              COLOR="0078D7"
+              ;;
+          esac
+
+          # Build adaptive card
+          CARD='{
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "'$COLOR'",
+            "summary": "Spec Event: ${{ inputs.event }}",
+            "sections": [{
+              "activityTitle": "${{ inputs.event }} - ${{ inputs.spec_id }}",
+              "facts": [
+                {"name": "Spec ID", "value": "${{ inputs.spec_id }}"},
+                {"name": "Title", "value": "${{ inputs.spec_title }}"},
+                {"name": "Status", "value": "${{ inputs.status }}"}
+              ],
+              "markdown": true
+            }]
+          }'
+
+          if [ -n "${{ inputs.pr_url }}" ]; then
+            CARD=$(echo "$CARD" | jq '.potentialAction = [{"@type": "OpenUri", "name": "View PR", "targets": [{"os": "default", "uri": "${{ inputs.pr_url }}"}]}]')
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$CARD" \
+            "$TEAMS_WEBHOOK_URL"
+
+  notify-discord:
+    name: Notify Discord
+    needs: load-config
+    if: needs.load-config.outputs.discord_enabled == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          # Determine color (decimal) based on event
+          case "${{ inputs.event }}" in
+            "implementation_completed"|"spec_approved")
+              COLOR=3066993  # Green
+              ;;
+            "implementation_failed")
+              COLOR=15158332  # Red
+              ;;
+            *)
+              COLOR=3447003  # Blue
+              ;;
+          esac
+
+          EMBED='{
+            "embeds": [{
+              "title": "${{ inputs.event }}",
+              "description": "Spec: **${{ inputs.spec_id }}** - ${{ inputs.spec_title }}",
+              "color": '$COLOR',
+              "fields": [
+                {"name": "Status", "value": "${{ inputs.status }}", "inline": true}
+              ],
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+            }]
+          }'
+
+          if [ -n "${{ inputs.pr_url }}" ]; then
+            EMBED=$(echo "$EMBED" | jq '.embeds[0].fields += [{"name": "Pull Request", "value": "[#${{ inputs.pr_number }}](${{ inputs.pr_url }})", "inline": true}]')
+          fi
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data "$EMBED" \
+            "$DISCORD_WEBHOOK_URL"
+
+  alert-pagerduty:
+    name: Alert PagerDuty
+    needs: load-config
+    if: needs.load-config.outputs.pagerduty_enabled == 'true' && inputs.status == 'failure'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send PagerDuty alert
+        env:
+          PAGERDUTY_ROUTING_KEY: ${{ secrets.PAGERDUTY_ROUTING_KEY }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "routing_key": "'$PAGERDUTY_ROUTING_KEY'",
+              "event_action": "trigger",
+              "dedup_key": "spec-${{ inputs.spec_id }}-${{ github.run_id }}",
+              "payload": {
+                "summary": "Spec implementation failed: ${{ inputs.spec_id }}",
+                "severity": "warning",
+                "source": "spec-ingestion",
+                "custom_details": {
+                  "spec_id": "${{ inputs.spec_id }}",
+                  "spec_title": "${{ inputs.spec_title }}",
+                  "error": "${{ inputs.error_message }}",
+                  "workflow_run": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              },
+              "links": [{
+                "href": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                "text": "View Workflow Run"
+              }]
+            }' \
+            "https://events.pagerduty.com/v2/enqueue"
+
+  alert-opsgenie:
+    name: Alert Opsgenie
+    needs: load-config
+    if: needs.load-config.outputs.opsgenie_enabled == 'true' && inputs.status == 'failure'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send Opsgenie alert
+        env:
+          OPSGENIE_API_KEY: ${{ secrets.OPSGENIE_API_KEY }}
+        run: |
+          curl -X POST "https://api.opsgenie.com/v2/alerts" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: GenieKey $OPSGENIE_API_KEY" \
+            --data '{
+              "message": "Spec implementation failed: ${{ inputs.spec_id }}",
+              "alias": "spec-${{ inputs.spec_id }}-${{ github.run_id }}",
+              "description": "Spec ${{ inputs.spec_id }} (${{ inputs.spec_title }}) failed during implementation.\n\nError: ${{ inputs.error_message }}",
+              "priority": "P3",
+              "tags": ["spec-automation", "ci-cd"],
+              "details": {
+                "spec_id": "${{ inputs.spec_id }}",
+                "spec_title": "${{ inputs.spec_title }}",
+                "workflow_run": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              }
+            }'

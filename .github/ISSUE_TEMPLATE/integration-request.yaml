@@ -1,0 +1,123 @@
+name: Integration Request
+description: Request a new integration or enhancement to existing integrations
+title: "[INTEGRATION]: "
+labels: ["enhancement", "integration"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Integration Request
+
+        Request a new integration with external tools, services, or platforms.
+
+        Currently supported integrations:
+        - Slack notifications
+        - Microsoft Teams
+        - Jira
+        - Linear
+        - Discord
+        - PagerDuty
+        - Datadog
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Request Type
+      options:
+        - New integration
+        - Enhancement to existing integration
+        - Bug in existing integration
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Integration Platform
+      options:
+        - Slack
+        - Microsoft Teams
+        - Discord
+        - Jira
+        - Linear
+        - GitHub (additional features)
+        - GitLab
+        - Azure DevOps
+        - PagerDuty
+        - Opsgenie
+        - Datadog
+        - New Relic
+        - Sentry
+        - Webhook (generic)
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: input
+    id: platform-other
+    attributes:
+      label: Other Platform
+      description: If you selected "Other", specify the platform
+      placeholder: "ServiceNow"
+    validations:
+      required: false
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe how you would use this integration
+      placeholder: |
+        I want to receive notifications in Microsoft Teams when...
+        I need to automatically create Jira tickets when...
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: What specific functionality do you need?
+      placeholder: |
+        - Send notification when spec is approved
+        - Include spec ID, title, and link
+        - Support rich formatting
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Low - Nice to have
+        - Medium - Would improve workflow significantly
+        - High - Blocking adoption
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any workarounds or alternatives?
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information, API documentation links, etc.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help implement this integration
+        - label: I have access to test this integration

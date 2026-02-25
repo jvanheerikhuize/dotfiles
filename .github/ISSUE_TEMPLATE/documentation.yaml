@@ -1,0 +1,95 @@
+name: Documentation Request
+description: Request documentation improvements or report documentation issues
+title: "[DOCS]: "
+labels: ["documentation", "good first issue"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Documentation Request
+
+        Help us improve our documentation! This could be:
+        - Missing documentation
+        - Unclear or confusing content
+        - Outdated information
+        - Typos or formatting issues
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Request Type
+      options:
+        - Missing documentation
+        - Unclear/confusing content
+        - Outdated information
+        - Typo/formatting issue
+        - New example needed
+        - Translation request
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Documentation Area
+      options:
+        - README
+        - Spec-Based Development Guide
+        - Contributing Guidelines
+        - API/Schema Documentation
+        - AI Context Documentation (.ai/)
+        - GitHub Templates
+        - Runbook/Operations
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Document Location
+      description: Link or path to the relevant documentation
+      placeholder: "docs/spec-based-development.md#section-name"
+    validations:
+      required: false
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Content
+      description: What does the documentation currently say (if applicable)?
+      placeholder: Paste the relevant section or describe what's there
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the Problem?
+      description: Describe what's wrong or missing
+      placeholder: |
+        The documentation doesn't explain how to...
+        I was confused about...
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Improvement
+      description: How would you like to see this improved?
+      placeholder: |
+        It would be helpful if the documentation included...
+        A code example showing...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to submit a PR to fix this

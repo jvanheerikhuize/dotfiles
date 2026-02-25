@@ -1,0 +1,113 @@
+name: Specification Review Request
+description: Request review for a new or updated specification
+title: "[SPEC REVIEW]: "
+labels: ["spec-review", "needs-review"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Specification Review Request
+
+        Use this template when submitting a specification for review.
+
+  - type: input
+    id: spec-id
+    attributes:
+      label: Specification ID
+      description: The unique identifier for this spec
+      placeholder: "FEAT-0001"
+    validations:
+      required: true
+
+  - type: input
+    id: spec-file
+    attributes:
+      label: Specification File
+      description: Path to the spec file in the repository
+      placeholder: "specs/features/FEAT-0001-feature-name.yaml"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: spec-type
+    attributes:
+      label: Specification Type
+      options:
+        - Feature Specification
+        - API Specification
+        - Schema Definition
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief summary of what this spec defines
+      placeholder: |
+        This specification defines...
+    validations:
+      required: true
+
+  - type: textarea
+    id: key-decisions
+    attributes:
+      label: Key Decisions
+      description: Highlight important design decisions that need review
+      placeholder: |
+        - Decision 1: Chose X over Y because...
+        - Decision 2: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: open-questions
+    attributes:
+      label: Open Questions
+      description: Any unresolved questions that need input
+      placeholder: |
+        - Should we...?
+        - How should we handle...?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: Priority level for this specification
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: Spec follows the template format
+          required: true
+        - label: All required fields are filled in
+          required: true
+        - label: Acceptance criteria are testable
+          required: true
+        - label: Technical requirements are complete
+          required: true
+        - label: Spec has been validated against schema
+          required: true
+
+  - type: textarea
+    id: reviewers
+    attributes:
+      label: Requested Reviewers
+      description: Tag specific people or teams for review
+      placeholder: "@username or @org/team"
+    validations:
+      required: false

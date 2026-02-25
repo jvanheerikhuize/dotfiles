@@ -1,0 +1,376 @@
+# Specification Configuration
+# This file manages all specifications in the repository
+# Used by the spec-ingestion workflow and scripts
+#
+# Specs can be added here for batch processing or tracked centrally
+#
+# Documentation: docs/integrations.md
+
+version: "1.0"
+
+# Global settings for spec processing
+settings:
+  # Default branch for implementation PRs
+  target_branch: "main"
+
+  # Require approval before auto-implementation
+  require_approval: true
+
+  # Labels to add to generated PRs
+  pr_labels:
+    - "automated"
+    - "spec-implementation"
+
+  # Reviewers to auto-assign (GitHub usernames)
+  auto_reviewers: []
+    # - "username1"
+    # - "username2"
+
+  # Teams to auto-assign for review
+  auto_review_teams: []
+    # - "engineering-team"
+    # - "architecture-team"
+
+  # Run tests before creating PR
+  run_tests: true
+
+  # Validation settings
+  validation:
+    require_schema_validation: true
+    require_acceptance_criteria: true
+    min_acceptance_criteria: 1
+
+  # AI implementation settings
+  ai:
+    model: "claude-sonnet-4-20250514"  # Model for implementation
+    max_retries: 3                      # Retry failed implementations
+    timeout_minutes: 30                 # Max time per spec
+
+# Specification registry
+# Add specs here to track them centrally and enable batch processing
+specifications:
+  # Example entry (uncomment and modify):
+  # - id: "FEAT-0001"
+  #   file: "specs/features/FEAT-0001-user-authentication.yaml"
+  #   status: "approved"  # draft | review | approved | implemented | deprecated
+  #   auto_implement: true  # Set to true to include in scheduled processing
+  #   priority: "high"
+  #   assignee: "username"
+  #   target_version: "1.0.0"
+  #   notes: "Core authentication feature"
+  #   labels:
+  #     - "authentication"
+  #     - "security"
+
+  # - id: "API-0001"
+  #   file: "specs/api/users-api.openapi.yaml"
+  #   status: "approved"
+  #   auto_implement: true
+  #   priority: "high"
+
+# Spec categories for organization
+categories:
+  features:
+    path: "specs/features"
+    schema: "specs/schemas/feature-spec.schema.json"
+    description: "Feature specifications"
+    id_prefix: "FEAT"
+
+  api:
+    path: "specs/api"
+    schema: null  # Uses OpenAPI validation
+    description: "API specifications (OpenAPI 3.x)"
+    id_prefix: "API"
+
+  schemas:
+    path: "specs/schemas"
+    description: "JSON schemas for validation"
+    id_prefix: "SCHEMA"
+
+# Processing hooks (shell commands)
+hooks:
+  # Run before processing any spec
+  pre_process: []
+    # - "npm run lint"
+    # - "npm run type-check"
+
+  # Run after successful implementation
+  post_process: []
+    # - "npm run format"
+    # - "npm run test"
+
+  # Run on validation failure
+  on_validation_failure: []
+    # - "./scripts/notify-failure.sh"
+
+  # Run on successful implementation
+  on_implementation_success: []
+    # - "./scripts/notify-success.sh"
+
+# =============================================================================
+# INTEGRATIONS
+# =============================================================================
+# Configure external service integrations
+# Each integration requires specific secrets to be set in GitHub Actions
+# See docs/integrations.md for setup instructions
+
+integrations:
+
+  # ---------------------------------------------------------------------------
+  # SLACK
+  # ---------------------------------------------------------------------------
+  # Sends notifications to Slack channels
+  # Required secret: SLACK_WEBHOOK_URL
+  slack:
+    enabled: false
+    # Default channel for notifications
+    channel: "#engineering"
+    # Webhook URL (or use SLACK_WEBHOOK_URL secret)
+    webhook_url: ""
+    # Events to notify on
+    notify_on:
+      - "spec_approved"
+      - "implementation_started"
+      - "implementation_completed"
+      - "implementation_failed"
+      - "pr_created"
+      - "pr_merged"
+    # Message formatting
+    include_spec_details: true
+    include_pr_link: true
+    mention_on_failure: []  # ["@channel", "@oncall"]
+
+  # ---------------------------------------------------------------------------
+  # MICROSOFT TEAMS
+  # ---------------------------------------------------------------------------
+  # Sends notifications to Microsoft Teams channels
+  # Required secret: TEAMS_WEBHOOK_URL
+  teams:
+    enabled: false
+    webhook_url: ""
+    notify_on:
+      - "spec_approved"
+      - "implementation_started"
+      - "implementation_completed"
+      - "implementation_failed"
+    # Adaptive card formatting
+    use_adaptive_cards: true
+
+  # ---------------------------------------------------------------------------
+  # DISCORD
+  # ---------------------------------------------------------------------------
+  # Sends notifications to Discord channels
+  # Required secret: DISCORD_WEBHOOK_URL
+  discord:
+    enabled: false
+    webhook_url: ""
+    notify_on:
+      - "implementation_completed"
+      - "implementation_failed"
+    # Bot appearance
+    username: "Spec Bot"
+    avatar_url: ""
+
+  # ---------------------------------------------------------------------------
+  # JIRA
+  # ---------------------------------------------------------------------------
+  # Syncs specs with Jira issues
+  # Required secrets: JIRA_BASE_URL, JIRA_EMAIL, JIRA_API_TOKEN
+  jira:
+    enabled: false
+    base_url: ""  # https://your-domain.atlassian.net
+    project_key: ""  # e.g., "PROJ"
+    # Issue type for specs
+    issue_type: "Story"
+    # Transitions
+    transition_on_approve: ""  # Transition ID when spec approved
+    transition_on_implement: ""  # Transition ID when implemented
+    # Field mappings
+    field_mappings:
+      spec_id: "customfield_10001"
+      priority: "priority"
+      acceptance_criteria: "customfield_10002"
+    # Sync options
+    create_subtasks_for_criteria: false
+    sync_status_bidirectional: false
+
+  # ---------------------------------------------------------------------------
+  # LINEAR
+  # ---------------------------------------------------------------------------
+  # Syncs specs with Linear issues
+  # Required secret: LINEAR_API_KEY
+  linear:
+    enabled: false
+    team_id: ""
+    # Labels to apply
+    labels:
+      - "spec"
+    # State mappings
+    state_mappings:
+      draft: "Backlog"
+      review: "In Review"
+      approved: "Todo"
+      implemented: "Done"
+
+  # ---------------------------------------------------------------------------
+  # AZURE DEVOPS
+  # ---------------------------------------------------------------------------
+  # Syncs with Azure DevOps work items
+  # Required secrets: AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, AZURE_DEVOPS_PAT
+  azure_devops:
+    enabled: false
+    organization: ""
+    project: ""
+    # Work item type
+    work_item_type: "User Story"
+    # Area path
+    area_path: ""
+    # Iteration path
+    iteration_path: ""
+
+  # ---------------------------------------------------------------------------
+  # GITHUB PROJECTS
+  # ---------------------------------------------------------------------------
+  # Adds specs to GitHub Projects
+  github_projects:
+    enabled: false
+    project_number: null  # Project number (not ID)
+    # Status field mappings
+    status_field: "Status"
+    status_mappings:
+      draft: "Backlog"
+      review: "In Review"
+      approved: "Ready"
+      implemented: "Done"
+
+  # ---------------------------------------------------------------------------
+  # PAGERDUTY
+  # ---------------------------------------------------------------------------
+  # Sends alerts for critical failures
+  # Required secret: PAGERDUTY_ROUTING_KEY
+  pagerduty:
+    enabled: false
+    routing_key: ""
+    # Only alert on these events
+    alert_on:
+      - "implementation_failed"
+    # Severity mapping
+    severity: "warning"  # critical, error, warning, info
+
+  # ---------------------------------------------------------------------------
+  # OPSGENIE
+  # ---------------------------------------------------------------------------
+  # Sends alerts via Opsgenie
+  # Required secret: OPSGENIE_API_KEY
+  opsgenie:
+    enabled: false
+    api_key: ""
+    alert_on:
+      - "implementation_failed"
+    priority: "P3"  # P1-P5
+    tags:
+      - "spec-failure"
+      - "automation"
+
+  # ---------------------------------------------------------------------------
+  # DATADOG
+  # ---------------------------------------------------------------------------
+  # Sends metrics and events to Datadog
+  # Required secrets: DATADOG_API_KEY, DATADOG_APP_KEY
+  datadog:
+    enabled: false
+    site: "datadoghq.com"  # or datadoghq.eu, etc.
+    # Metrics to send
+    send_metrics: true
+    metric_prefix: "spec_ingestion"
+    # Events to send
+    send_events: true
+    event_tags:
+      - "team:platform"
+      - "service:spec-automation"
+
+  # ---------------------------------------------------------------------------
+  # NEW RELIC
+  # ---------------------------------------------------------------------------
+  # Sends events to New Relic
+  # Required secret: NEW_RELIC_API_KEY
+  new_relic:
+    enabled: false
+    account_id: ""
+    # Event type for custom events
+    event_type: "SpecIngestion"
+
+  # ---------------------------------------------------------------------------
+  # SENTRY
+  # ---------------------------------------------------------------------------
+  # Reports errors to Sentry
+  # Required secret: SENTRY_DSN
+  sentry:
+    enabled: false
+    dsn: ""
+    environment: "production"
+    # Only report failures
+    report_on:
+      - "implementation_failed"
+      - "validation_failed"
+
+  # ---------------------------------------------------------------------------
+  # WEBHOOKS (Generic)
+  # ---------------------------------------------------------------------------
+  # Send notifications to custom webhook endpoints
+  webhooks:
+    enabled: false
+    endpoints:
+      # - name: "custom-system"
+      #   url: "https://example.com/webhook"
+      #   secret: ""  # For HMAC signature (or use WEBHOOK_SECRET_<NAME> secret)
+      #   events:
+      #     - "implementation_completed"
+      #   headers:
+      #     Authorization: "Bearer token"
+      #   retry_count: 3
+
+  # ---------------------------------------------------------------------------
+  # EMAIL
+  # ---------------------------------------------------------------------------
+  # Sends email notifications
+  # Required secrets: SMTP_HOST, SMTP_USER, SMTP_PASSWORD
+  email:
+    enabled: false
+    smtp:
+      host: ""
+      port: 587
+      secure: true
+    from: "noreply@example.com"
+    # Recipients by event type
+    recipients:
+      implementation_failed:
+        - "team@example.com"
+      pr_created:
+        - "reviewers@example.com"
+
+# =============================================================================
+# NOTIFICATIONS
+# =============================================================================
+# Global notification settings
+
+notifications:
+  # Suppress notifications in certain conditions
+  suppress_during:
+    - weekends: false
+    - outside_hours: false  # Business hours only
+    business_hours:
+      start: "09:00"
+      end: "18:00"
+      timezone: "UTC"
+
+  # Rate limiting
+  rate_limit:
+    max_per_hour: 50
+    max_per_day: 200
+
+  # Digest mode - bundle notifications
+  digest:
+    enabled: false
+    interval_minutes: 60
+    channel: "#engineering-digest"

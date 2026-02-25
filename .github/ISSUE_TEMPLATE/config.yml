@@ -1,0 +1,23 @@
+# Issue Template Configuration
+# This file controls issue template behavior and external links
+#
+# TODO: Update the URLs below after creating your repository from this template
+
+blank_issues_enabled: false
+
+contact_links:
+  - name: Documentation
+    url: https://github.com/your-org/your-repo/tree/main/docs
+    about: Check the documentation before opening an issue
+
+  - name: Spec-Based Development Guide
+    url: https://github.com/your-org/your-repo/blob/main/docs/spec-based-development.md
+    about: Learn about writing and submitting specifications
+
+  - name: Integrations Guide
+    url: https://github.com/your-org/your-repo/blob/main/docs/integrations.md
+    about: Configure Slack, Teams, Jira, and other integrations
+
+  - name: Discussions
+    url: https://github.com/your-org/your-repo/discussions
+    about: Ask questions and discuss ideas

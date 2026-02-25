@@ -1,0 +1,250 @@
+# OpenAPI 3.1 Specification Template
+# Use this template for API specifications
+# Reference: https://spec.openapis.org/oas/v3.1.0
+
+openapi: "3.1.0"
+
+info:
+  title: "API Name"
+  description: |
+    Comprehensive description of the API.
+  version: "1.0.0"
+  contact:
+    name: "API Support"
+    email: "api-support@example.com"
+  license:
+    name: "MIT"
+    url: "https://opensource.org/licenses/MIT"
+
+servers:
+  - url: "https://api.example.com/v1"
+    description: "Production"
+  - url: "https://staging-api.example.com/v1"
+    description: "Staging"
+  - url: "http://localhost:3000/v1"
+    description: "Local Development"
+
+tags:
+  - name: "Resources"
+    description: "Resource management operations"
+
+paths:
+  /resources:
+    get:
+      tags:
+        - "Resources"
+      summary: "List all resources"
+      description: "Retrieves a paginated list of resources."
+      operationId: "listResources"
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+      responses:
+        "200":
+          description: "Successful response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      tags:
+        - "Resources"
+      summary: "Create a resource"
+      description: "Creates a new resource."
+      operationId: "createResource"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceCreate"
+      responses:
+        "201":
+          description: "Resource created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /resources/{id}:
+    get:
+      tags:
+        - "Resources"
+      summary: "Get a resource"
+      description: "Retrieves a single resource by ID."
+      operationId: "getResource"
+      parameters:
+        - $ref: "#/components/parameters/ResourceId"
+      responses:
+        "200":
+          description: "Successful response"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  schemas:
+    Resource:
+      type: object
+      required:
+        - id
+        - name
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: "Unique identifier"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: "Resource name"
+        description:
+          type: string
+          description: "Optional description"
+        created_at:
+          type: string
+          format: date-time
+          description: "Creation timestamp"
+        updated_at:
+          type: string
+          format: date-time
+          description: "Last update timestamp"
+
+    ResourceCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+
+    ResourceList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Resource"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  parameters:
+    ResourceId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: "Resource ID"
+
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: "Page number"
+
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: "Items per page"
+
+  responses:
+    BadRequest:
+      description: "Bad request"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    Unauthorized:
+      description: "Unauthorized"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    NotFound:
+      description: "Resource not found"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+    InternalError:
+      description: "Internal server error"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - BearerAuth: []

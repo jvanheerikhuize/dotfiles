@@ -1,0 +1,102 @@
+# Feature Specification Template
+# Copy this file and rename it to match your feature (e.g., FEAT-0001-user-authentication.yaml)
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0000"  # Replace with next available ID
+  title: "Feature Title"
+  version: "1.0.0"
+  status: "draft"  # draft | review | approved | implemented | deprecated
+  priority: "medium"  # critical | high | medium | low
+  author: "Your Name"
+  created_at: "2024-01-01"
+  updated_at: "2024-01-01"
+  tags:
+    - tag1
+    - tag2
+
+description:
+  summary: |
+    Brief overview of the feature in 1-2 sentences.
+
+  problem_statement: |
+    Describe the problem this feature solves.
+    - What pain points exist?
+    - Who is affected?
+    - What is the impact?
+
+  proposed_solution: |
+    High-level description of how this feature solves the problem.
+    Focus on the "what" rather than the "how".
+
+  out_of_scope:
+    - "Item explicitly not included in this feature"
+
+  dependencies:
+    - "FEAT-0000: Dependent feature name"
+    - "External system or service"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "A user is logged in"
+    when: "They perform action X"
+    then: "Result Y occurs"
+    and:
+      - "Additional condition A"
+      - "Additional condition B"
+
+  - id: "AC-002"
+    given: "Precondition"
+    when: "Trigger"
+    then: "Expected outcome"
+
+technical_requirements:
+  constraints:
+    - "Must be backward compatible"
+    - "Must work offline"
+
+  performance:
+    response_time_ms: 200
+    throughput: "1000 requests/second"
+    availability: "99.9%"
+
+  security:
+    - "Data must be encrypted at rest"
+    - "Requires authentication"
+
+  scalability: |
+    Describe expected load and scaling requirements.
+
+api_changes:
+  new_endpoints:
+    - method: "POST"
+      path: "/api/v1/resource"
+      description: "Create new resource"
+
+  modified_endpoints:
+    - "PUT /api/v1/existing-resource - Added new field"
+
+  breaking_changes: false
+
+ui_changes:
+  wireframes:
+    - "docs/wireframes/feature-name.png"
+
+  components:
+    - "ComponentName"
+
+testing_requirements:
+  unit_tests: true
+  integration_tests: true
+  e2e_tests: false
+  performance_tests: false
+  test_scenarios:
+    - "Happy path scenario"
+    - "Edge case scenario"
+    - "Error handling scenario"
+
+rollout:
+  feature_flag: "feature_name_enabled"
+  rollout_strategy: "gradual"  # immediate | gradual | canary | beta
+  rollback_plan: |
+    Steps to rollback if issues are detected.

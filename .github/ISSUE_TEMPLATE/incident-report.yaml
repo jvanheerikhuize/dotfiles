@@ -1,0 +1,145 @@
+name: Incident Report
+description: Report a production incident or outage
+title: "[INCIDENT]: "
+labels: ["incident", "critical", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Production Incident Report
+
+        **This template is for production incidents only.** For bugs in development, use the Bug Report template.
+
+        Please fill out this form as quickly as possible to help coordinate the response.
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Incident Severity
+      description: Based on impact and urgency
+      options:
+        - SEV1 - Critical (Complete outage, data loss, security breach)
+        - SEV2 - High (Major feature unavailable, significant user impact)
+        - SEV3 - Medium (Degraded performance, partial outage)
+        - SEV4 - Low (Minor issue, workaround available)
+    validations:
+      required: true
+
+  - type: input
+    id: started
+    attributes:
+      label: Incident Start Time
+      description: When did the incident start? (UTC preferred)
+      placeholder: "2024-01-15 14:30 UTC"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: status
+    attributes:
+      label: Current Status
+      options:
+        - Investigating
+        - Identified
+        - Monitoring
+        - Resolved
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: What is the user/business impact?
+      placeholder: |
+        - Number of users affected:
+        - Features affected:
+        - Business impact:
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Incident Summary
+      description: Brief description of what's happening
+      placeholder: |
+        The spec ingestion workflow is failing for all new specifications...
+    validations:
+      required: true
+
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline
+      description: Key events in the incident (update as investigation progresses)
+      placeholder: |
+        - 14:30 UTC - First alert received
+        - 14:35 UTC - Began investigation
+        - 14:45 UTC - Root cause identified
+      value: |
+        - [TIME] - Incident reported
+    validations:
+      required: true
+
+  - type: textarea
+    id: actions
+    attributes:
+      label: Actions Taken
+      description: What has been done so far?
+      placeholder: |
+        - Checked workflow logs
+        - Verified API keys
+        - Contacted vendor support
+    validations:
+      required: false
+
+  - type: textarea
+    id: root-cause
+    attributes:
+      label: Root Cause (if known)
+      description: What caused the incident?
+    validations:
+      required: false
+
+  - type: textarea
+    id: resolution
+    attributes:
+      label: Resolution
+      description: How was the incident resolved?
+    validations:
+      required: false
+
+  - type: input
+    id: resolved-time
+    attributes:
+      label: Resolution Time
+      description: When was the incident resolved? (UTC)
+      placeholder: "2024-01-15 15:30 UTC"
+    validations:
+      required: false
+
+  - type: textarea
+    id: followup
+    attributes:
+      label: Follow-up Actions
+      description: What needs to happen to prevent recurrence?
+      placeholder: |
+        - [ ] Update monitoring alerts
+        - [ ] Add redundancy
+        - [ ] Schedule post-mortem
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: notifications
+    attributes:
+      label: Notification Checklist
+      description: Who has been notified?
+      options:
+        - label: On-call engineer
+        - label: Team lead
+        - label: Stakeholders
+        - label: Status page updated

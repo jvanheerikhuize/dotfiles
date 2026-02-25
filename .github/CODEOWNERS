@@ -1,0 +1,30 @@
+# CODEOWNERS
+# This file defines code ownership for automatic review assignment
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# TODO: Replace @your-org/* with your actual GitHub organization/team names
+
+# Default owners for everything in the repo
+* @your-org/engineering-team
+
+# Specification files require architecture team review
+/specs/ @your-org/architecture-team
+/specs/schemas/ @your-org/architecture-team @your-org/engineering-leads
+
+# Configuration files
+specs.config.yaml @your-org/engineering-leads
+/.github/ @your-org/devops-team @your-org/engineering-leads
+
+# Documentation
+/docs/ @your-org/documentation-team
+README.md @your-org/engineering-leads
+
+# CI/CD workflows
+/.github/workflows/ @your-org/devops-team
+
+# Scripts
+/scripts/ @your-org/devops-team @your-org/engineering-leads
+
+# Claude/AI configuration
+/.claude/ @your-org/engineering-leads
+/.ai/ @your-org/architecture-team @your-org/engineering-leads

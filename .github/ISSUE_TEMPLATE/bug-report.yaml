@@ -1,0 +1,151 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Bug Report
+
+        Thank you for reporting a bug! Please provide as much detail as possible to help us investigate.
+
+        **Before submitting**, please:
+        - Search existing issues to avoid duplicates
+        - Check the [troubleshooting guide](docs/spec-based-development.md#troubleshooting)
+
+  - type: input
+    id: spec-id
+    attributes:
+      label: Related Specification
+      description: If this bug relates to a specific feature spec, provide the ID
+      placeholder: "FEAT-0001 (optional)"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug
+      placeholder: When I try to... the system...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Enter '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: The system should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Instead, the system...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Low - Minor inconvenience
+        - Medium - Impacts workflow but has workaround
+        - High - Significantly impacts users
+        - Critical - System unusable or data loss
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - Spec Processing
+        - GitHub Workflow
+        - CLI Script
+        - Documentation
+        - Schema Validation
+        - Configuration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Relevant environment details
+      placeholder: |
+        - OS: [e.g., macOS 14.0, Ubuntu 22.04, Windows 11]
+        - Node.js version: [e.g., 20.10.0]
+        - Claude Code version: [e.g., 1.0.0]
+        - Git version: [e.g., 2.43.0]
+      value: |
+        - OS:
+        - Node.js version:
+        - Claude Code version:
+        - Git version:
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Any relevant log output or error messages (please redact sensitive info)
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Relevant configuration (specs.config.yaml, etc.)
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or information
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have included steps to reproduce
+          required: true
+        - label: I have redacted any sensitive information from logs
+          required: true

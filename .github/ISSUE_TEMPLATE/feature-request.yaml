@@ -1,0 +1,160 @@
+name: Feature Request
+description: Propose a new feature (will require a specification)
+title: "[FEATURE]: "
+labels: ["feature-request", "needs-spec"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+
+        Thank you for suggesting a feature! This issue will be used to discuss the idea before a formal specification is created.
+
+        **Process:**
+        1. Submit this feature request
+        2. Discussion and refinement
+        3. If approved, create formal spec in `specs/features/`
+        4. Spec review and approval
+        5. Implementation
+
+        See [Spec-Based Development Guide](docs/spec-based-development.md) for details.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      options:
+        - Core Functionality
+        - Integration
+        - Automation/Workflow
+        - Developer Experience
+        - Documentation
+        - Performance
+        - Security
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Who is affected?
+      placeholder: |
+        **Who is affected:** [developers, ops team, etc.]
+
+        **Current situation:**
+        Currently, users cannot...
+
+        **Impact:**
+        This causes... [time lost, errors, frustration]
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this problem be solved? What would the feature look like?
+      placeholder: |
+        The feature should...
+        Users would be able to...
+
+        **User flow:**
+        1. User does X
+        2. System responds with Y
+        3. Result is Z
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Success Criteria (Draft)
+      description: How would we know this feature is complete? Use Given/When/Then format if possible.
+      placeholder: |
+        - Given [context], when [action], then [result]
+        - Given [context], when [action], then [result]
+
+        Or simply:
+        - Users can...
+        - System shows...
+        - Performance is...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other solutions have you considered? Why were they rejected?
+      placeholder: |
+        **Alternative 1:** [Description]
+        - Pros: ...
+        - Cons: ...
+        - Why rejected: ...
+
+        **Alternative 2:** [Description]
+        - Pros: ...
+        - Cons: ...
+        - Why rejected: ...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Suggested Priority
+      description: How urgent is this feature?
+      options:
+        - Low - Nice to have
+        - Medium - Would improve workflow
+        - High - Blocking important work
+        - Critical - Security or compliance issue
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated Complexity
+      description: How complex do you think this feature is?
+      options:
+        - Small - Few hours of work
+        - Medium - Few days of work
+        - Large - Week or more
+        - Unknown - Needs investigation
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Does this feature depend on other features, specs, or external systems?
+      placeholder: |
+        - Depends on FEAT-0001
+        - Requires integration with [system]
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any mockups, diagrams, examples, or additional information
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have searched existing issues and specs to avoid duplicates
+          required: true
+        - label: I have provided clear success criteria
+          required: true
+        - label: I am willing to help write the formal specification for this feature

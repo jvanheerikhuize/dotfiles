@@ -1,0 +1,504 @@
+# Specification Ingestion Workflow
+# Triggers AI CLI to implement features based on approved specifications
+#
+# Supports multiple AI CLIs: Claude Code, Aider, GitHub Copilot, Cody, and custom
+# Platform-agnostic: runs on Ubuntu, Windows, and macOS runners
+#
+# Triggers:
+#   1. Manual dispatch with spec file path
+#   2. Push to specs/ directory with approved specs
+#   3. Scheduled processing of specs from configuration file
+#
+# Requirements:
+#   - AI API key secret configured (varies by provider)
+#   - AI CLI will be auto-installed based on selection
+
+name: Spec Ingestion
+
+on:
+  # Manual trigger with spec file input
+  workflow_dispatch:
+    inputs:
+      spec_file:
+        description: "Path to specification file (e.g., specs/features/FEAT-0001.yaml)"
+        required: false
+        type: string
+      spec_id:
+        description: "Specification ID to process from config (e.g., FEAT-0001)"
+        required: false
+        type: string
+      ai_cli:
+        description: "AI CLI to use for implementation"
+        required: false
+        type: choice
+        options:
+          - auto
+          - claude
+          - aider
+          - copilot
+          - cody
+          - gpt
+        default: auto
+      runner_os:
+        description: "Runner OS"
+        required: false
+        type: choice
+        options:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        default: ubuntu-latest
+      dry_run:
+        description: "Run without making changes (validation only)"
+        required: false
+        type: boolean
+        default: false
+
+  # Trigger on approved spec changes
+  push:
+    branches:
+      - main
+    paths:
+      - "specs/features/*.yaml"
+      - "specs/api/*.yaml"
+      - "specs/api/*.json"
+
+  # Scheduled processing of pending specs
+  schedule:
+    - cron: "0 9 * * 1-5"  # 9 AM UTC, Monday-Friday
+
+  # Trigger via pull request approval
+  pull_request_review:
+    types: [submitted]
+
+env:
+  SPECS_CONFIG: "specs.config.yaml"
+  NODE_VERSION: "20"
+  PYTHON_VERSION: "3.11"
+  AI_CLI: ${{ github.event.inputs.ai_cli || 'auto' }}
+
+jobs:
+  # Validate specifications before processing
+  validate:
+    name: Validate Specifications
+    runs-on: ${{ github.event.inputs.runner_os || 'ubuntu-latest' }}
+    outputs:
+      specs_to_process: ${{ steps.determine-specs.outputs.specs }}
+      has_specs: ${{ steps.determine-specs.outputs.has_specs }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install validation tools (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          npm install -g ajv-cli
+          pip install yamllint || true
+
+      - name: Install validation tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          npm install -g ajv-cli
+          pip install yamllint
+
+      - name: Install yq
+        uses: mikefarah/yq@master
+
+      - name: Determine specs to process (Unix)
+        if: runner.os != 'Windows'
+        id: determine-specs
+        run: |
+          SPECS_JSON="[]"
+
+          # Priority 1: Manual spec file input
+          if [ -n "${{ github.event.inputs.spec_file }}" ]; then
+            if [ -f "${{ github.event.inputs.spec_file }}" ]; then
+              SPECS_JSON=$(echo "[]" | jq --arg f "${{ github.event.inputs.spec_file }}" '. + [$f]')
+            else
+              echo "::error::Specified file does not exist: ${{ github.event.inputs.spec_file }}"
+              exit 1
+            fi
+
+          # Priority 2: Manual spec ID from config
+          elif [ -n "${{ github.event.inputs.spec_id }}" ]; then
+            if [ -f "${{ env.SPECS_CONFIG }}" ]; then
+              SPEC_FILE=$(yq e ".specifications[] | select(.id == \"${{ github.event.inputs.spec_id }}\") | .file" "${{ env.SPECS_CONFIG }}")
+              if [ -n "$SPEC_FILE" ] && [ -f "$SPEC_FILE" ]; then
+                SPECS_JSON=$(echo "[]" | jq --arg f "$SPEC_FILE" '. + [$f]')
+              else
+                echo "::error::Spec ID not found in config or file missing: ${{ github.event.inputs.spec_id }}"
+                exit 1
+              fi
+            fi
+
+          # Priority 3: Changed files in push
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            CHANGED_SPECS=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- 'specs/**/*.yaml' 'specs/**/*.json' | grep -v '_template' || true)
+            if [ -n "$CHANGED_SPECS" ]; then
+              SPECS_JSON=$(echo "$CHANGED_SPECS" | jq -R -s 'split("\n") | map(select(length > 0))')
+            fi
+
+          # Priority 4: Scheduled - process pending from config
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ -f "${{ env.SPECS_CONFIG }}" ]; then
+              SPECS_JSON=$(yq e -o=json '.specifications | map(select(.status == "approved" and .auto_implement == true)) | .[].file' "${{ env.SPECS_CONFIG }}" | jq -R -s 'split("\n") | map(select(length > 0))')
+            fi
+
+          # Priority 5: PR approval - get specs from PR
+          elif [ "${{ github.event_name }}" = "pull_request_review" ] && [ "${{ github.event.review.state }}" = "approved" ]; then
+            CHANGED_SPECS=$(gh pr diff ${{ github.event.pull_request.number }} --name-only | grep -E '^specs/.*\.(yaml|json)$' | grep -v '_template' || true)
+            if [ -n "$CHANGED_SPECS" ]; then
+              SPECS_JSON=$(echo "$CHANGED_SPECS" | jq -R -s 'split("\n") | map(select(length > 0))')
+            fi
+          fi
+
+          echo "specs=$SPECS_JSON" >> $GITHUB_OUTPUT
+          if [ "$SPECS_JSON" != "[]" ]; then
+            echo "has_specs=true" >> $GITHUB_OUTPUT
+            echo "::notice::Specs to process: $SPECS_JSON"
+          else
+            echo "has_specs=false" >> $GITHUB_OUTPUT
+            echo "::notice::No specs to process"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Determine specs to process (Windows)
+        if: runner.os == 'Windows'
+        id: determine-specs-win
+        shell: pwsh
+        run: |
+          $specsJson = "[]"
+
+          # Priority 1: Manual spec file input
+          if ("${{ github.event.inputs.spec_file }}") {
+            if (Test-Path "${{ github.event.inputs.spec_file }}") {
+              $specsJson = @("${{ github.event.inputs.spec_file }}") | ConvertTo-Json -Compress
+            } else {
+              Write-Error "Specified file does not exist: ${{ github.event.inputs.spec_file }}"
+              exit 1
+            }
+          }
+          # Priority 2: Manual spec ID from config
+          elseif ("${{ github.event.inputs.spec_id }}") {
+            if (Test-Path "${{ env.SPECS_CONFIG }}") {
+              $specFile = yq e ".specifications[] | select(.id == `"${{ github.event.inputs.spec_id }}`") | .file" "${{ env.SPECS_CONFIG }}"
+              if ($specFile -and (Test-Path $specFile)) {
+                $specsJson = @($specFile) | ConvertTo-Json -Compress
+              }
+            }
+          }
+          # Priority 3: Changed files in push
+          elseif ("${{ github.event_name }}" -eq "push") {
+            $changed = git diff --name-only ${{ github.event.before }} ${{ github.sha }} -- 'specs/**/*.yaml' 'specs/**/*.json' | Where-Object { $_ -notmatch '_template' }
+            if ($changed) {
+              $specsJson = $changed | ConvertTo-Json -Compress
+            }
+          }
+          # Priority 4: Scheduled
+          elseif ("${{ github.event_name }}" -eq "schedule") {
+            if (Test-Path "${{ env.SPECS_CONFIG }}") {
+              $specs = yq e -o=json '.specifications | map(select(.status == "approved" and .auto_implement == true)) | .[].file' "${{ env.SPECS_CONFIG }}"
+              if ($specs) {
+                $specsJson = ($specs -split "`n" | Where-Object { $_ }) | ConvertTo-Json -Compress
+              }
+            }
+          }
+
+          "specs=$specsJson" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          if ($specsJson -ne "[]") {
+            "has_specs=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            "has_specs=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      - name: Validate spec schemas (Unix)
+        if: runner.os != 'Windows' && steps.determine-specs.outputs.has_specs == 'true'
+        run: |
+          SPECS='${{ steps.determine-specs.outputs.specs }}'
+          echo "$SPECS" | jq -r '.[]' | while read -r spec_file; do
+            echo "Validating: $spec_file"
+
+            # YAML lint check
+            if [[ "$spec_file" == *.yaml ]] || [[ "$spec_file" == *.yml ]]; then
+              yamllint -d relaxed "$spec_file" || echo "::warning::YAML lint issues in $spec_file"
+            fi
+
+            # JSON Schema validation for feature specs
+            if [[ "$spec_file" == specs/features/* ]]; then
+              yq e -o=json "$spec_file" > /tmp/spec.json
+              ajv validate -s specs/schemas/feature-spec.schema.json -d /tmp/spec.json || {
+                echo "::error::Schema validation failed for $spec_file"
+                exit 1
+              }
+            fi
+
+            echo "::notice::Validated: $spec_file"
+          done
+
+  # Process specifications with AI CLI
+  implement:
+    name: Implement Specification
+    needs: validate
+    if: needs.validate.outputs.has_specs == 'true' && github.event.inputs.dry_run != 'true'
+    runs-on: ${{ github.event.inputs.runner_os || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+      pull-requests: write
+
+    strategy:
+      matrix:
+        spec: ${{ fromJson(needs.validate.outputs.specs_to_process) }}
+      max-parallel: 1
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install yq
+        uses: mikefarah/yq@master
+
+      - name: Detect and Install AI CLI
+        id: setup-ai
+        shell: bash
+        run: |
+          AI_CLI="${{ env.AI_CLI }}"
+
+          # Auto-detect based on available secrets
+          if [ "$AI_CLI" = "auto" ]; then
+            if [ -n "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+              AI_CLI="claude"
+            elif [ -n "${{ secrets.OPENAI_API_KEY }}" ]; then
+              AI_CLI="aider"
+            else
+              AI_CLI="claude"  # Default
+            fi
+          fi
+
+          echo "ai_cli=$AI_CLI" >> $GITHUB_OUTPUT
+
+          # Install the selected AI CLI
+          case "$AI_CLI" in
+            claude)
+              npm install -g @anthropic-ai/claude-code
+              ;;
+            aider)
+              pip install aider-chat
+              ;;
+            copilot)
+              gh extension install github/gh-copilot || true
+              ;;
+            cody)
+              echo "Cody requires manual installation - see https://sourcegraph.com/docs/cody"
+              ;;
+            gpt)
+              pip install openai-cli || npm install -g gpt-cli
+              ;;
+          esac
+
+          echo "::notice::Using AI CLI: $AI_CLI"
+
+      - name: Extract spec metadata
+        id: spec-meta
+        shell: bash
+        run: |
+          SPEC_FILE="${{ matrix.spec }}"
+
+          if [[ "$SPEC_FILE" == *.yaml ]] || [[ "$SPEC_FILE" == *.yml ]]; then
+            SPEC_ID=$(yq e '.metadata.id // "UNKNOWN"' "$SPEC_FILE")
+            SPEC_TITLE=$(yq e '.metadata.title // "Unknown"' "$SPEC_FILE")
+            SPEC_PRIORITY=$(yq e '.metadata.priority // "medium"' "$SPEC_FILE")
+          else
+            SPEC_ID=$(jq -r '.metadata.id // "UNKNOWN"' "$SPEC_FILE")
+            SPEC_TITLE=$(jq -r '.metadata.title // "Unknown"' "$SPEC_FILE")
+            SPEC_PRIORITY=$(jq -r '.metadata.priority // "medium"' "$SPEC_FILE")
+          fi
+
+          BRANCH_NAME="spec/${SPEC_ID,,}"
+
+          echo "spec_id=$SPEC_ID" >> $GITHUB_OUTPUT
+          echo "spec_title=$SPEC_TITLE" >> $GITHUB_OUTPUT
+          echo "spec_priority=$SPEC_PRIORITY" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create feature branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b ${{ steps.spec-meta.outputs.branch_name }}
+
+      - name: Run AI implementation (Unix)
+        if: runner.os != 'Windows'
+        id: ai-implement
+        env:
+          AI_CLI: ${{ steps.setup-ai.outputs.ai_cli }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SRC_ACCESS_TOKEN: ${{ secrets.SRC_ACCESS_TOKEN }}
+        run: |
+          SPEC_FILE="${{ matrix.spec }}"
+
+          chmod +x scripts/ingest-spec.sh
+          ./scripts/ingest-spec.sh "$SPEC_FILE" 2>&1 | tee implementation.log
+
+          if grep -q "Implementation completed successfully" implementation.log; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=partial" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run AI implementation (Windows)
+        if: runner.os == 'Windows'
+        id: ai-implement-win
+        shell: pwsh
+        env:
+          AI_CLI: ${{ steps.setup-ai.outputs.ai_cli }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SRC_ACCESS_TOKEN: ${{ secrets.SRC_ACCESS_TOKEN }}
+        run: |
+          $specFile = "${{ matrix.spec }}"
+          ./scripts/Invoke-SpecIngestion.ps1 -SpecFile $specFile -AiCli $env:AI_CLI | Tee-Object -FilePath implementation.log
+
+          if (Select-String -Path implementation.log -Pattern "Implementation completed successfully") {
+            "status=success" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } else {
+            "status=partial" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          }
+
+      - name: Commit changes
+        run: |
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          AI_CLI="${{ steps.setup-ai.outputs.ai_cli }}"
+          AI_NAME="AI Assistant"
+          AI_EMAIL="noreply@example.com"
+
+          case "$AI_CLI" in
+            claude) AI_NAME="Claude"; AI_EMAIL="noreply@anthropic.com" ;;
+            aider)  AI_NAME="Aider"; AI_EMAIL="noreply@aider.chat" ;;
+            copilot) AI_NAME="GitHub Copilot"; AI_EMAIL="noreply@github.com" ;;
+            cody)   AI_NAME="Sourcegraph Cody"; AI_EMAIL="noreply@sourcegraph.com" ;;
+            gpt)    AI_NAME="GPT"; AI_EMAIL="noreply@openai.com" ;;
+          esac
+
+          git commit -m "feat(${{ steps.spec-meta.outputs.spec_id }}): ${{ steps.spec-meta.outputs.spec_title }}
+
+          Implements specification: ${{ matrix.spec }}
+
+          Generated by $AI_NAME via spec-ingestion workflow
+
+          Co-Authored-By: $AI_NAME <$AI_EMAIL>"
+
+      - name: Push branch
+        run: |
+          git push -u origin ${{ steps.spec-meta.outputs.branch_name }}
+
+      - name: Create Pull Request
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SPEC_FILE="${{ matrix.spec }}"
+          AI_CLI="${{ steps.setup-ai.outputs.ai_cli }}"
+
+          if [[ "$SPEC_FILE" == *.yaml ]] || [[ "$SPEC_FILE" == *.yml ]]; then
+            SUMMARY=$(yq e '.description.summary' "$SPEC_FILE")
+            ACCEPTANCE_CRITERIA=$(yq e '.acceptance_criteria | .[] | "- [ ] " + .id + ": Given " + .given + ", when " + .when + ", then " + .then' "$SPEC_FILE")
+          else
+            SUMMARY=$(jq -r '.description.summary' "$SPEC_FILE")
+            ACCEPTANCE_CRITERIA=$(jq -r '.acceptance_criteria | .[] | "- [ ] \(.id): Given \(.given), when \(.when), then \(.then)"' "$SPEC_FILE")
+          fi
+
+          PR_URL=$(gh pr create \
+            --title "feat(${{ steps.spec-meta.outputs.spec_id }}): ${{ steps.spec-meta.outputs.spec_title }}" \
+            --body "$(cat <<EOF
+          ## Summary
+          $SUMMARY
+
+          ## Specification
+          - **ID**: ${{ steps.spec-meta.outputs.spec_id }}
+          - **Priority**: ${{ steps.spec-meta.outputs.spec_priority }}
+          - **Spec File**: \`${{ matrix.spec }}\`
+          - **AI CLI**: $AI_CLI
+
+          ## Acceptance Criteria
+          $ACCEPTANCE_CRITERIA
+
+          ## Implementation Notes
+          This PR was automatically generated by AI ($AI_CLI) based on the approved specification.
+
+          ### Checklist
+          - [ ] Code review completed
+          - [ ] Tests passing
+          - [ ] Documentation updated
+          - [ ] Acceptance criteria verified
+
+          ---
+          *Generated by [spec-ingestion workflow](.github/workflows/spec-ingestion.yml)*
+          EOF
+          )" \
+            --label "automated,spec-implementation" \
+            --base main)
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "::notice::Created PR: $PR_URL"
+
+      - name: Update spec status
+        if: success()
+        run: |
+          SPEC_FILE="${{ matrix.spec }}"
+
+          if [[ "$SPEC_FILE" == *.yaml ]] || [[ "$SPEC_FILE" == *.yml ]]; then
+            yq e -i '.metadata.status = "implemented"' "$SPEC_FILE"
+            yq e -i ".metadata.updated_at = \"$(date +%Y-%m-%d)\"" "$SPEC_FILE"
+          fi
+
+  # Summary job
+  summary:
+    name: Workflow Summary
+    needs: [validate, implement]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Spec Ingestion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Implementation | ${{ needs.implement.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**AI CLI**: ${{ env.AI_CLI }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Specs processed**: ${{ needs.validate.outputs.specs_to_process }}" >> $GITHUB_STEP_SUMMARY

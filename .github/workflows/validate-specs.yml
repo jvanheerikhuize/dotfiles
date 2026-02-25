@@ -1,0 +1,117 @@
+# Specification Validation Workflow
+# Validates all spec files on PRs to ensure quality before merge
+
+name: Validate Specifications
+
+on:
+  pull_request:
+    paths:
+      - "specs/**"
+      - "specs.config.yaml"
+
+  push:
+    branches:
+      - main
+    paths:
+      - "specs/schemas/**"  # Re-validate all specs if schemas change
+
+jobs:
+  validate:
+    name: Validate Spec Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install validation tools
+        run: |
+          npm install -g ajv-cli
+          pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          echo "Linting YAML specifications..."
+          find specs -name "*.yaml" -o -name "*.yml" | while read -r file; do
+            echo "Checking: $file"
+            yamllint -d relaxed "$file" || echo "::warning file=$file::YAML lint issues found"
+          done
+
+      - name: Validate feature specs against schema
+        run: |
+          echo "Validating feature specifications..."
+          for spec in specs/features/*.yaml; do
+            if [[ "$(basename "$spec")" == "_template.yaml" ]]; then
+              continue
+            fi
+            if [[ -f "$spec" ]]; then
+              echo "Validating: $spec"
+              yq e -o=json "$spec" > /tmp/spec.json
+              ajv validate -s specs/schemas/feature-spec.schema.json -d /tmp/spec.json || {
+                echo "::error file=$spec::Schema validation failed"
+                exit 1
+              }
+            fi
+          done
+
+      - name: Check spec metadata
+        run: |
+          echo "Checking spec metadata..."
+          for spec in specs/features/*.yaml; do
+            if [[ "$(basename "$spec")" == "_template.yaml" ]]; then
+              continue
+            fi
+            if [[ -f "$spec" ]]; then
+              # Check for required fields
+              SPEC_ID=$(yq e '.metadata.id // ""' "$spec")
+              SPEC_STATUS=$(yq e '.metadata.status // ""' "$spec")
+              AC_COUNT=$(yq e '.acceptance_criteria | length' "$spec")
+
+              if [[ -z "$SPEC_ID" ]]; then
+                echo "::error file=$spec::Missing metadata.id"
+                exit 1
+              fi
+
+              if [[ -z "$SPEC_STATUS" ]]; then
+                echo "::error file=$spec::Missing metadata.status"
+                exit 1
+              fi
+
+              if [[ "$AC_COUNT" -lt 1 ]]; then
+                echo "::error file=$spec::At least one acceptance criterion required"
+                exit 1
+              fi
+
+              echo "::notice file=$spec::Valid - ID: $SPEC_ID, Status: $SPEC_STATUS, AC: $AC_COUNT"
+            fi
+          done
+
+      - name: Validate OpenAPI specs
+        run: |
+          npm install -g @redocly/cli
+          echo "Validating OpenAPI specifications..."
+          for spec in specs/api/*.yaml specs/api/*.json; do
+            if [[ "$(basename "$spec")" == "_template.openapi.yaml" ]]; then
+              continue
+            fi
+            if [[ -f "$spec" ]]; then
+              echo "Validating: $spec"
+              redocly lint "$spec" --skip-rule=no-empty-servers || echo "::warning file=$spec::OpenAPI validation issues"
+            fi
+          done
+
+      - name: Summary
+        run: |
+          echo "## Spec Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          FEATURE_COUNT=$(find specs/features -name "*.yaml" ! -name "_template.yaml" 2>/dev/null | wc -l)
+          API_COUNT=$(find specs/api -name "*.yaml" -o -name "*.json" 2>/dev/null | grep -v "_template" | wc -l)
+          echo "| Feature Specs | $FEATURE_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Specs | $API_COUNT |" >> $GITHUB_STEP_SUMMARY
