@@ -7,9 +7,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROFILES_DIR="${SCRIPT_DIR}/profiles"
 DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
 
-source "${SCRIPT_DIR}/scripts/utils.sh"
-source "${SCRIPT_DIR}/scripts/packages.sh"
-source "${SCRIPT_DIR}/scripts/dotfiles.sh"
+source "${SCRIPT_DIR}/src/utils.sh"
+source "${SCRIPT_DIR}/src/packages.sh"
+source "${SCRIPT_DIR}/src/dotfiles.sh"
 
 # ---------------------------------------------------------------------------
 # Defaults

@@ -28,7 +28,7 @@ description:
 
   proposed_solution: |
     At the start of install.sh (after validation, before any installs), run a
-    check_connectivity() function in scripts/utils.sh that pings a reliable host
+    check_connectivity() function in src/utils.sh that pings a reliable host
     (e.g. 1.1.1.1 or 8.8.8.8) with a short timeout. If it fails, print a clear
     error and exit 1. If the profile contains only dotfiles (no network packages),
     the check is skipped automatically.
@@ -80,7 +80,7 @@ technical_requirements:
   constraints:
     - "Check uses 'curl -s --max-time 3 https://1.1.1.1' or 'ping -c 1 -W 2 1.1.1.1' — curl preferred as it tests HTTPS"
     - "Timeout must be 3 seconds or less to fail fast"
-    - "Implemented as check_connectivity() in scripts/utils.sh"
+    - "Implemented as check_connectivity() in src/utils.sh"
     - "Runs after profile validation (FEAT-0006) and before apt-get update"
 
 testing_requirements:

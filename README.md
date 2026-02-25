@@ -87,7 +87,7 @@ dotfiles/
 │   ├── server.yaml            # Server profile (extends: base)
 │   └── dev.yaml               # Dev profile (extends: desktop)
 ├── dotfiles/                   # Config files to symlink into $HOME
-├── scripts/
+├── src/
 │   ├── utils.sh               # Logging, error handling, helpers
 │   ├── packages.sh            # Package install dispatcher
 │   └── dotfiles.sh            # Symlink management

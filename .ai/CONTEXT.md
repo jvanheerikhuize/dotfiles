@@ -99,7 +99,7 @@
 | Main provisioning script | `install.sh` |
 | Package manifests | `profiles/` |
 | Dotfiles | `dotfiles/` |
-| Package type installers | `scripts/` |
+| Package type installers | `src/` |
 
 ### Key Files
 ```
@@ -112,7 +112,7 @@ dotfiles/
 │   └── dev.yaml               # Developer profile
 ├── dotfiles/                   # Actual config files to symlink
 │   └── ...
-└── scripts/                    # Package type install helpers
+└── src/                        # Package type install helpers
     ├── packages.sh            # Package install dispatcher
     ├── dotfiles.sh            # Symlink management
     └── utils.sh               # Shared utilities (logging, etc.)
@@ -121,15 +121,15 @@ dotfiles/
 ### Module Map
 ```
 install.sh
-  → scripts/utils.sh          (logging, error handling)
+  → src/utils.sh              (logging, error handling)
   → profiles/<name>.yaml      (package manifest for profile)
-  → scripts/packages.sh       (dispatch by package type)
+  → src/packages.sh           (dispatch by package type)
       → apt-get install
       → snap install
       → flatpak install
       → wget + dpkg -i (deb)
       → custom script runner
-  → scripts/dotfiles.sh       (symlink $HOME dotfiles)
+  → src/dotfiles.sh           (symlink $HOME dotfiles)
 ```
 
 ---

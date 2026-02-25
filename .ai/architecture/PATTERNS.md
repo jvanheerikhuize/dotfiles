@@ -54,7 +54,7 @@ Rules:
 
 ## 4. Logging Pattern
 
-All output goes through helpers in `scripts/utils.sh`. Never use bare `echo`.
+All output goes through helpers in `src/utils.sh`. Never use bare `echo`.
 
 ```bash
 # utils.sh defines these:

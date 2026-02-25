@@ -30,8 +30,8 @@
 │                                                              │
 │   install.sh                                                 │
 │   ├── profiles/<name>.yaml   (what to install)              │
-│   ├── scripts/packages.sh    (how to install packages)      │
-│   └── scripts/dotfiles.sh    (how to link dotfiles)         │
+│   ├── src/packages.sh    (how to install packages)      │
+│   └── src/dotfiles.sh    (how to link dotfiles)         │
 │                                                              │
 │   Package managers: apt, snap, flatpak, deb, custom         │
 │   Dotfiles: symlinks from dotfiles/ → $HOME                 │
@@ -65,7 +65,7 @@ install.sh (entrypoint)
 │
 ├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --help)
 │
-├── scripts/utils.sh
+├── src/utils.sh
 │   ├── log_info()      print timestamped info line
 │   ├── log_warn()      print warning (does not exit)
 │   ├── log_error()     print error and exit 1
@@ -76,14 +76,14 @@ install.sh (entrypoint)
 │   ├── resolve extends: chain (recursive merge, base first)
 │   └── emit merged package lists per type
 │
-├── scripts/packages.sh
+├── src/packages.sh
 │   ├── install_apt()       sudo apt-get install -y <pkg>
 │   ├── install_snap()      sudo snap install <pkg>
 │   ├── install_flatpak()   flatpak install -y <pkg>
 │   ├── install_deb()       wget <url> → sudo dpkg -i
 │   └── install_custom()    eval <script>
 │
-└── scripts/dotfiles.sh
+└── src/dotfiles.sh
     ├── link_dotfile()      ln -sf <repo>/dotfiles/<file> $HOME/<file>
     ├── check_existing()    detect file vs symlink vs missing
     └── backup_and_link()   mv <file> <file>.bak && ln -sf
@@ -94,9 +94,9 @@ install.sh (entrypoint)
 | Component | File | Purpose |
 |-----------|------|---------|
 | Entrypoint | `install.sh` | Arg parsing, orchestration, profile loading |
-| Utilities | `scripts/utils.sh` | Logging, guards, shared helpers |
-| Package installer | `scripts/packages.sh` | One function per package type |
-| Dotfile manager | `scripts/dotfiles.sh` | Symlink creation, collision handling |
+| Utilities | `src/utils.sh` | Logging, guards, shared helpers |
+| Package installer | `src/packages.sh` | One function per package type |
+| Dotfile manager | `src/dotfiles.sh` | Symlink creation, collision handling |
 | Profile manifests | `profiles/*.yaml` | Declarative package lists per profile |
 | Dotfiles | `dotfiles/` | Actual config files to symlink into $HOME |
 

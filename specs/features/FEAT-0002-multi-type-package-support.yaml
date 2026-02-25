@@ -19,7 +19,7 @@ metadata:
 
 description:
   summary: |
-    Extend scripts/packages.sh to support snap, flatpak, direct .deb URL downloads,
+    Extend src/packages.sh to support snap, flatpak, direct .deb URL downloads,
     and custom shell commands as package types in addition to the apt support from FEAT-0001.
 
   problem_statement: |
@@ -29,7 +29,7 @@ description:
     packages, leaving the rest to be installed manually.
 
   proposed_solution: |
-    Add one install function per package type to scripts/packages.sh:
+    Add one install function per package type to src/packages.sh:
     - install_snap_package(): sudo snap install
     - install_flatpak_package(): flatpak install
     - install_deb_package(): wget to temp file + sudo dpkg -i, then cleanup

@@ -139,7 +139,7 @@ technical_notes: |
   └── dev.yaml                  # Dev profile (extends: desktop)
   dotfiles/
   └── .gitkeep                  # Placeholder; real dotfiles added in later specs
-  scripts/
+  src/
   ├── utils.sh                  # Shared: log(), error(), require_cmd()
   ├── packages.sh               # Package install dispatcher (apt only in this spec)
   └── dotfiles.sh               # Symlink management

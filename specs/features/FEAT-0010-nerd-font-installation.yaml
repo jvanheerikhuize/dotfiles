@@ -33,7 +33,7 @@ description:
         nerd_fonts:
           - JetBrainsMono
           - FiraCode
-    A scripts/fonts.sh script downloads the latest release zip for each named Nerd
+    A src/fonts.sh script downloads the latest release zip for each named Nerd
     Font from the official GitHub releases API, extracts .ttf files to
     ~/.local/share/fonts/<FontName>/, and runs fc-cache -fv to refresh the font cache.
     Idempotency: checks if any .ttf file for the font already exists before downloading.
