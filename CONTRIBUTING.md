@@ -132,8 +132,8 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat(FEAT-0002): Add snap and flatpak package type support
 
-- Implement install_snap_package() in scripts/packages.sh
-- Implement install_flatpak_package() in scripts/packages.sh
+- Implement install_snap_package() in src/packages.sh
+- Implement install_flatpak_package() in src/packages.sh
 - Add snap/flatpak lists to profile YAML schema
 - Tests: AC-001 through AC-004
 

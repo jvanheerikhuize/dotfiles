@@ -1,0 +1,26 @@
+# Desktop profile — GUI workstation tools.
+# Extends base; adds graphical applications available via apt.
+# GUI apps better suited for snap/flatpak are added in FEAT-0002.
+profile:
+  name: desktop
+  extends: base
+
+packages:
+  apt:
+    # GNOME customisation
+    - gnome-tweaks
+    - dconf-editor
+
+    # Media
+    - vlc
+
+    # Fonts
+    - fonts-firacode
+
+    # Disk management
+    - gparted
+
+  snap: []
+  flatpak: []
+  deb: []
+  custom: []

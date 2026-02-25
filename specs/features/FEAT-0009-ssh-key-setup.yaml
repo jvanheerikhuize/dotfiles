@@ -28,7 +28,7 @@ description:
     and should be automated.
 
   proposed_solution: |
-    A scripts/setup-ssh.sh script, called by install.sh after packages are installed.
+    A src/setup-ssh.sh script, called by install.sh after packages are installed.
     It:
     1. Checks if ~/.ssh/id_ed25519 already exists — if so, skips generation
     2. Creates ~/.ssh/ with mode 700 if it doesn't exist
@@ -50,7 +50,7 @@ description:
 acceptance_criteria:
   - id: "AC-001"
     given: "~/.ssh/id_ed25519 does not exist"
-    when: "install.sh is run (or scripts/setup-ssh.sh is run standalone)"
+    when: "install.sh is run (or src/setup-ssh.sh is run standalone)"
     then: "An ed25519 keypair is generated at ~/.ssh/id_ed25519 and ~/.ssh/id_ed25519.pub"
     and:
       - "~/.ssh/ permissions are 700"
@@ -114,7 +114,7 @@ testing_requirements:
     - "No existing ~/.ssh/config: config written with correct contents and permissions"
     - "Existing ~/.ssh/config: left untouched"
     - "Public key printed to stdout after generation"
-    - "Standalone scripts/setup-ssh.sh works without install.sh"
+    - "Standalone src/setup-ssh.sh works without install.sh"
 
 rollout:
   rollout_strategy: "immediate"

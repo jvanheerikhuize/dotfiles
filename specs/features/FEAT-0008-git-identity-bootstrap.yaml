@@ -30,7 +30,7 @@ description:
     manual step that should be automated.
 
   proposed_solution: |
-    Create a scripts/setup-git-identity.sh script, called by install.sh after
+    Create a src/setup-git-identity.sh script, called by install.sh after
     dotfiles are linked. It:
     1. Checks if git user.name and user.email are already set (via git config --global)
     2. If not, prompts interactively for name and email
@@ -65,7 +65,7 @@ acceptance_criteria:
   - id: "AC-003"
     given: "install.sh is run with --non-interactive"
     when: "git identity is not yet set"
-    then: "The prompt is skipped with log_warn: 'Git identity not configured — run scripts/setup-git-identity.sh manually'"
+    then: "The prompt is skipped with log_warn: 'Git identity not configured — run src/setup-git-identity.sh manually'"
 
   - id: "AC-004"
     given: "~/.gitconfig.local already exists with correct values"
@@ -78,7 +78,7 @@ acceptance_criteria:
     then: "It contains '[include] path = ~/.gitconfig.local' so local identity is picked up automatically"
 
   - id: "AC-006"
-    given: "scripts/setup-git-identity.sh"
+    given: "src/setup-git-identity.sh"
     when: "Run standalone"
     then: "It prompts for name/email and writes ~/.gitconfig.local, independent of install.sh"
 
@@ -101,7 +101,7 @@ testing_requirements:
     - "Re-run: prompt skipped, existing values preserved"
     - "--non-interactive: warning shown, ~/.gitconfig.local not created"
     - "Invalid email format: re-prompted"
-    - "Standalone scripts/setup-git-identity.sh works without running full install.sh"
+    - "Standalone src/setup-git-identity.sh works without running full install.sh"
 
 rollout:
   rollout_strategy: "immediate"

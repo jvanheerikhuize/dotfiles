@@ -30,10 +30,10 @@ description:
 
   proposed_solution: |
     Store a dconf dump file at dotfiles/gnome/dconf-settings.ini in the repo.
-    A scripts/gnome.sh script applies it with 'dconf load / < dconf-settings.ini'.
+    A src/gnome.sh script applies it with 'dconf load / < dconf-settings.ini'.
     This is only run on desktop/dev profiles (guarded by checking $XDG_CURRENT_DESKTOP).
     The dump file is generated from the developer's current settings via a helper
-    script (scripts/export-gnome-settings.sh) and committed to the repo.
+    script (src/export-gnome-settings.sh) and committed to the repo.
     Re-applying is idempotent (dconf load is a full replace of the keyed paths).
 
   out_of_scope:
@@ -68,7 +68,7 @@ acceptance_criteria:
       - "Provisioning continues; this is not a fatal error"
 
   - id: "AC-004"
-    given: "scripts/export-gnome-settings.sh is run on a configured GNOME machine"
+    given: "src/export-gnome-settings.sh is run on a configured GNOME machine"
     when: "The script completes"
     then: "dotfiles/gnome/dconf-settings.ini is created/updated with the current dconf dump"
     and:

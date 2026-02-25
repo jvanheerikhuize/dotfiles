@@ -3,8 +3,6 @@
 # Used by the spec-ingestion workflow and scripts
 #
 # Specs can be added here for batch processing or tracked centrally
-#
-# Documentation: docs/integrations.md
 
 version: "1.0"
 
@@ -51,7 +49,7 @@ settings:
 specifications:
   - id: "FEAT-0001"
     file: "specs/features/FEAT-0001-core-provisioning-engine.yaml"
-    status: "approved"
+    status: "implemented"
     auto_implement: false
     priority: "critical"
     assignee: "Jerry"

@@ -5,7 +5,7 @@ metadata:
   id: "FEAT-0001"
   title: "Core Provisioning Engine"
   version: "1.0.0"
-  status: "approved"
+  status: "implemented"
   priority: "critical"
   author: "Jerry"
   created_at: "2026-02-25"
@@ -139,7 +139,7 @@ technical_notes: |
   └── dev.yaml                  # Dev profile (extends: desktop)
   dotfiles/
   └── .gitkeep                  # Placeholder; real dotfiles added in later specs
-  scripts/
+  src/
   ├── utils.sh                  # Shared: log(), error(), require_cmd()
   ├── packages.sh               # Package install dispatcher (apt only in this spec)
   └── dotfiles.sh               # Symlink management
