@@ -39,6 +39,7 @@ Scenarios:
   base-dotfiles         Dotfile symlinks are created in \$HOME            [profile: base]
   base-bash-login       bash --login exits 0; aliases available           [profile: base]
   base-idempotency      Second run of install.sh exits 0                  [profile: base]
+  base-dry-run          --dry-run makes no changes and exits 0            [profile: base]
 
 EOF
 }
@@ -78,6 +79,7 @@ SCENARIO_DEFS=(
   "base-dotfiles|base|test-base-dotfiles.sh"
   "base-bash-login|base|test-base-bash-login.sh"
   "base-idempotency|base|test-base-idempotency.sh"
+  "base-dry-run|base|test-base-dry-run.sh"
 )
 
 # ---------------------------------------------------------------------------

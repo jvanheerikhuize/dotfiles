@@ -102,7 +102,7 @@ specifications:
 
   - id: "FEAT-0005"
     file: "specs/features/FEAT-0005-dry-run-mode.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"
