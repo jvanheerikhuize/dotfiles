@@ -11,8 +11,8 @@ source "${SCRIPT_DIR}/../helpers.sh"
 # ---------------------------------------------------------------------------
 # Provision: dotfiles only
 # ---------------------------------------------------------------------------
-echo "  Running: install.sh --profile base --dotfiles-only"
-bash "${REPO_ROOT}/install.sh" --profile base --dotfiles-only
+echo "  Running: install.sh --profile base --dotfiles-only --force"
+bash "${REPO_ROOT}/install.sh" --profile base --dotfiles-only --force
 
 # ---------------------------------------------------------------------------
 # Assert bash --login exits 0 (no syntax errors in .bash_profile or .bashrc)

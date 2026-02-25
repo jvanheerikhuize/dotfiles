@@ -12,9 +12,11 @@ source "${SCRIPT_DIR}/../helpers.sh"
 # ---------------------------------------------------------------------------
 # First run
 # ---------------------------------------------------------------------------
-echo "  Running: install.sh --profile base (first run)"
+echo "  Running: install.sh --profile base --force (first run)"
+# --force replaces default skeleton files (e.g. /etc/skel/.bashrc) created by
+# useradd -m with our dotfile symlinks, mirroring real provisioning behaviour.
 
-if bash "${REPO_ROOT}/install.sh" --profile base; then
+if bash "${REPO_ROOT}/install.sh" --profile base --force; then
   _pass "First run exits 0"
 else
   _fail "First run exited non-zero — cannot continue idempotency check"

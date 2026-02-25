@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Scenario: Dotfile symlinks are created in $HOME after running
-# install.sh --profile base --dotfiles-only.
+# install.sh --profile base --dotfiles-only --force.
+# --force is required because Ubuntu creates a default .bashrc (from /etc/skel)
+# when the user account is created; without --force install.sh would skip it.
 # Also verifies .gitconfig values and that aliases load in interactive bash.
 set -uo pipefail
 
@@ -15,8 +17,8 @@ HOME_DIR="${HOME}"
 # ---------------------------------------------------------------------------
 # Provision: dotfiles only (apt packages tested separately)
 # ---------------------------------------------------------------------------
-echo "  Running: install.sh --profile base --dotfiles-only"
-bash "${REPO_ROOT}/install.sh" --profile base --dotfiles-only
+echo "  Running: install.sh --profile base --dotfiles-only --force"
+bash "${REPO_ROOT}/install.sh" --profile base --dotfiles-only --force
 
 # ---------------------------------------------------------------------------
 # Assert symlinks exist and point to the correct repo targets
