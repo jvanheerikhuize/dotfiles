@@ -45,6 +45,21 @@ A bare `return` inherits the exit code of the failed `[[ $- == *i* ]]` test (exi
 
 Ubuntu's `useradd -m` copies `/etc/skel` files (`.bashrc`, `.bash_profile`, `.profile`) into the new user's `$HOME` before provisioning runs. Without `--force`, `install.sh` sees these pre-existing regular files and skips symlinking (warns instead). Smoke tests must pass `--force` to replace them. This affects any test that asserts symlinks are created.
 
+### git `[include]` and `git config --global` write both silently fail when `~/.gitconfig` is a symlink into another git repo (git 2.34, Ubuntu 22.04)
+**Discovered**: 2026-02-26 | **Session**: 003 | **Relevant files**: `src/setup-git-identity.sh`, `dotfiles/.gitconfig`
+
+When `~/.gitconfig` is a symlink pointing to a file **inside another git repository** (e.g. `dotfiles/dotfiles/.gitconfig`), Ubuntu 22.04's git 2.34.1 (with CVE-2022-24765 security patches backported) exhibits **two silent failures**, both exit 0:
+1. `git config --global user.name` reads direct settings (e.g. `core.editor = vim`) correctly, but **does NOT follow `[include]` directives** from the symlink target.
+2. `git config --global include.path VALUE` (write) silently does nothing — it does **not** replace the symlink with a real file as expected on vanilla Linux.
+
+**Fix**: Bypass `git config --global` entirely. Use direct shell I/O to create a real `~/.gitconfig`:
+```bash
+src=$(readlink -f "${HOME}/.gitconfig")
+{ cat "$src"; printf '\n[include]\n\tpath = %s\n' "${GITCONFIG_LOCAL}"; } > "$tmp"
+mv "$tmp" "${HOME}/.gitconfig"
+```
+This copies the base settings verbatim, appends an `[include]` with the **absolute path** (no `~`), and replaces the symlink with a real file via `mv`. A real `~/.gitconfig` not inside a git repo is processed normally — `[include]` works. See `_register_gitconfig_include()` in `src/setup-git-identity.sh`.
+
 ---
 
 ## Patterns and Conventions

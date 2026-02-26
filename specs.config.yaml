@@ -138,7 +138,7 @@ specifications:
 
   - id: "FEAT-0008"
     file: "specs/features/FEAT-0008-git-identity-bootstrap.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"

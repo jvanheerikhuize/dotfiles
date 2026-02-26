@@ -44,6 +44,10 @@ Scenarios:
   validate-invalid      Invalid YAML exits 1 with correct error messages
   summary               Run summary is printed after a provisioning run      [profile: base]
   summary-partial       Partial summary is printed when a run fails
+  git-identity-fresh        First-time prompt writes ~/.gitconfig.local      [profile: base]
+  git-identity-idempotent   Second run skips prompt; file unchanged          [profile: base]
+  git-identity-non-interactive  --non-interactive warns, no file created     [profile: base]
+  git-identity-standalone   Standalone script works without install.sh       [profile: base]
 
 EOF
 }
@@ -88,6 +92,10 @@ SCENARIO_DEFS=(
   "validate-invalid|all|test-validate-invalid.sh"
   "summary|base|test-summary.sh"
   "summary-partial|all|test-summary-partial.sh"
+  "git-identity-fresh|base|test-git-identity-fresh.sh"
+  "git-identity-idempotent|base|test-git-identity-idempotent.sh"
+  "git-identity-non-interactive|base|test-git-identity-non-interactive.sh"
+  "git-identity-standalone|base|test-git-identity-standalone.sh"
 )
 
 # ---------------------------------------------------------------------------

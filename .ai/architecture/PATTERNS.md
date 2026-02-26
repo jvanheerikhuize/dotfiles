@@ -115,6 +115,7 @@ DOTFILES_ONLY=false
 FORCE=false
 DRY_RUN=false
 VALIDATE_ONLY=false
+NON_INTERACTIVE=false
 
 parse_args() {
   while [[ $# -gt 0 ]]; do
@@ -143,6 +144,10 @@ parse_args() {
         VALIDATE_ONLY=true
         shift
         ;;
+      --non-interactive)
+        NON_INTERACTIVE=true
+        shift
+        ;;
       --help)
         usage
         exit 0
@@ -165,6 +170,7 @@ Options:
   --force              Replace existing dotfiles (backs up to .bak)
   --dry-run            Preview what would be installed/linked; make no changes
   --validate-only      Validate profile YAML structure; skip installs and dotfiles
+  --non-interactive    Skip interactive prompts (e.g. git identity); emit warnings
   --help               Show this help
 EOF
 }
@@ -633,7 +639,40 @@ log_info() {
 
 ---
 
-## 18. Revision History
+## 18. Git Identity Bootstrap Pattern (FEAT-0008)
+
+`src/setup-git-identity.sh` writes `~/.gitconfig.local` with the user's name and email.
+It is sourced by `install.sh` and called as `setup_git_identity` after `apply_dotfiles`.
+It can also be run standalone.
+
+**Key behaviours:**
+
+| Condition | Behaviour |
+|-----------|-----------|
+| `git config --global user.name` already set | `log_info "already configured"` — no prompt, no file write |
+| `DRY_RUN=true` | `log_dry_run "Would prompt..."` — no changes |
+| `NON_INTERACTIVE=true` | `log_warn "not configured — run manually"` — no changes |
+| stdin EOF (non-TTY Docker env, no piped input) | same as non-interactive — falls through `if ! read -r` |
+| Interactive (stdin is a pipe with data, or TTY) | prompt for name + email, write `~/.gitconfig.local` |
+
+**Idempotency**: checking `git config --global user.name/email` before acting covers all cases — if `~/.gitconfig.local` already exists and `.gitconfig` includes it, git config will return the values and the script skips gracefully.
+
+**Email validation**: basic check `[[ "$email" == *@*.* ]]`; re-prompts on failure.
+
+**Sourcing vs standalone**: `[[ "${BASH_SOURCE[0]}" == "${0}" ]]` guard ensures the standalone arg parser and `setup_git_identity` call only run when the script is executed directly, not when sourced by `install.sh`.
+
+**`~/.gitconfig.local` location**: always `$HOME/.gitconfig.local`. The repo `.gitconfig` includes it via:
+```gitconfig
+[include]
+    path = ~/.gitconfig.local
+```
+Git silently ignores the include if the file does not exist — safe on fresh installs.
+
+**Smoke tests use piped stdin**: `printf "Name\nemail@example.com\n" | bash install.sh ...` — no `expect` dependency needed.
+
+---
+
+## 19. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -643,3 +682,5 @@ log_info() {
 | 1.3.0 | 2026-02-25 | Jerry | Bug fixes: document return 0 guard and --force requirement in smoke tests |
 | 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run to logging section; --dry-run to arg parsing; DRY_RUN pattern section |
 | 1.5.0 | 2026-02-25 | Jerry | FEAT-0006: added --validate-only to arg parsing; validation pattern section |
+| 1.6.0 | 2026-02-26 | Jerry | FEAT-0007: added --quiet to arg parsing; run summary pattern section |
+| 1.7.0 | 2026-02-26 | Jerry | FEAT-0008: added --non-interactive to arg parsing; git identity bootstrap pattern section |

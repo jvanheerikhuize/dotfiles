@@ -62,8 +62,10 @@
 - [x] FEAT-0004: Docker smoke test suite (tests/smoke/, .github/workflows/smoke-tests.yml)
 - [x] FEAT-0005: Dry-run mode (--dry-run flag in install.sh; DRY_RUN gates all mutations)
 - [x] FEAT-0006: Profile YAML validation (--validate-only flag; validate_profiles() in src/validate.sh)
+- [x] FEAT-0007: Run summary report (--quiet flag; EXIT trap; print_summary(); INSTALLED/SKIPPED/LINKED/WARNINGS arrays)
 - [x] FEAT-0015: AI governance system (DIRECTIVES.md, .ai/memory/, .ai/decisions/ ADR infra, template-sync runbook)
-- [ ] FEAT-0007 through FEAT-0014: Pending (see specs.config.yaml)
+- [x] FEAT-0008: Git identity bootstrap (--non-interactive; src/setup-git-identity.sh; ~/.gitconfig.local; [include] in .gitconfig)
+- [ ] FEAT-0009 through FEAT-0014: Pending (see specs.config.yaml)
 
 ### Recent Changes
 - 2026-02-25: Repository initialized; FEAT-0001 through FEAT-0004 implemented
@@ -71,6 +73,7 @@
 - 2026-02-25: FEAT-0006 implemented: --validate-only flag; validate_profiles() catches missing keys, bad extends, circular refs, non-list package values before any installs
 - 2026-02-26: FEAT-0007 implemented: run summary report; EXIT trap; QUIET flag; summary arrays populated by install/link functions
 - 2026-02-26: FEAT-0015 implemented: AI governance system adopted from upstream template — DIRECTIVES.md, persistent .ai/memory/ system, .ai/decisions/ ADR infrastructure, docs/runbooks/template-sync.md
+- 2026-02-26: FEAT-0008 implemented: git identity bootstrap — src/setup-git-identity.sh prompts for name/email and writes ~/.gitconfig.local; [include] stanza added to dotfiles/.gitconfig; --non-interactive flag added to install.sh
 
 ### Known Issues
 - None
@@ -271,6 +274,6 @@ All configuration is declarative YAML. No `.env` files needed.
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-02-25 |
+| Last Updated | 2026-02-26 |
 | Update Frequency | After each implemented spec |
 | Owner | Jerry |
