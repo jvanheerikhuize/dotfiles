@@ -51,6 +51,23 @@ EOF
   log_info "Git identity written to ${GITCONFIG_LOCAL}"
 }
 
+# Ensure ~/.gitconfig has an [include] pointing to GITCONFIG_LOCAL.
+#
+# When ~/.gitconfig is a symlink (e.g. managed by dotfiles.sh), git config
+# cannot reliably follow [include] directives inside the symlink target when
+# that target lives inside another git repository (git 2.34 / Ubuntu 22.04).
+# Calling `git config --global include.path` reads the symlink target and
+# re-writes ~/.gitconfig as a real file via rename(2), replacing the tilde
+# path with the absolute path supplied here.  Subsequent `git config --global`
+# calls read a real file and follow [include] correctly.
+#
+# If ~/.gitconfig is already a real file the call is still safe — it either
+# replaces an existing include.path entry or adds a new one.
+_register_gitconfig_include() {
+  git config --global include.path "${GITCONFIG_LOCAL}"
+  log_info "Include path registered: ${GITCONFIG_LOCAL}"
+}
+
 # ---------------------------------------------------------------------------
 # Main setup function — called by install.sh (sourced) and standalone entry.
 # ---------------------------------------------------------------------------
@@ -108,8 +125,9 @@ setup_git_identity() {
   done
 
   _write_gitconfig_local "$name" "$email"
-  log_info "git config user.name  = $(git config --global user.name 2>/dev/null || echo '(pending)')"
-  log_info "git config user.email = $(git config --global user.email 2>/dev/null || echo '(pending)')"
+  _register_gitconfig_include
+  log_info "git config user.name  = $(git config --file "${GITCONFIG_LOCAL}" user.name 2>/dev/null || echo '(pending)')"
+  log_info "git config user.email = $(git config --file "${GITCONFIG_LOCAL}" user.email 2>/dev/null || echo '(pending)')"
 }
 
 # ---------------------------------------------------------------------------

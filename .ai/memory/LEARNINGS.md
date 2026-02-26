@@ -45,6 +45,15 @@ A bare `return` inherits the exit code of the failed `[[ $- == *i* ]]` test (exi
 
 Ubuntu's `useradd -m` copies `/etc/skel` files (`.bashrc`, `.bash_profile`, `.profile`) into the new user's `$HOME` before provisioning runs. Without `--force`, `install.sh` sees these pre-existing regular files and skips symlinking (warns instead). Smoke tests must pass `--force` to replace them. This affects any test that asserts symlinks are created.
 
+### git `[include]` in global config does NOT work when `~/.gitconfig` is a symlink (git 2.34, Ubuntu 22.04 Docker)
+**Discovered**: 2026-02-26 | **Session**: 003 | **Relevant files**: `src/setup-git-identity.sh`, `dotfiles/.gitconfig`
+
+When `~/.gitconfig` is a symlink pointing to a file inside another git repo (e.g. `dotfiles/dotfiles/.gitconfig`), git 2.34.1 on Ubuntu 22.04 reads the symlink target and returns **direct settings** (e.g. `core.editor = vim`) correctly, but **does NOT follow `[include]` directives** inside that file. This means `git config --global user.name` returns empty even when `~/.gitconfig.local` exists with the right content.
+
+**Fix**: After writing `~/.gitconfig.local`, call `git config --global include.path "${GITCONFIG_LOCAL}"` (absolute path). On Linux, `git config --global` uses `rename(2)` to atomically write its output — this **replaces the symlink with a real file**. Subsequent `git config --global` calls read the real file and follow `[include]` correctly. See `_register_gitconfig_include()` in `src/setup-git-identity.sh`.
+
+**Why**: The `git config --global` write also copies all existing content from the symlink target, so no settings are lost. The tilde path `~/.gitconfig.local` in the original `dotfiles/.gitconfig` gets replaced with the absolute path (e.g. `/home/testuser/.gitconfig.local`), which resolves correctly regardless of `~` expansion support.
+
 ---
 
 ## Patterns and Conventions
