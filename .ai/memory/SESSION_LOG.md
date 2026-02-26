@@ -135,4 +135,47 @@ Copy this block and fill it in at the end of each session:
 - PR: #7
 
 ### Open Items
-- [ ] FEAT-0007 through FEAT-0014 remain as draft specs (v1.1 and v1.2 backlog)
+- [ ] FEAT-0008 through FEAT-0014 remain as draft specs (v1.1 and v1.2 backlog)
+
+## [2026-02-26] Session 003
+
+**AI**: Claude Sonnet 4.6
+**Requested by**: human
+**Summary**: Prepared and implemented FEAT-0008 (git identity bootstrap) on branch FEAT-0008-git-identity-bootstrap.
+
+### Requests
+- "can you prepare to create FEAT-0008" — analysis, plan, ambiguity flags
+- "no" / "i confirm your assumption in the ambiguity" — --dotfiles-only still runs identity; only --skip-dotfiles skips it
+- "can you create a branch for FEAT-0008"
+- "go" — implement
+
+### Changes Made
+| File | Change |
+|------|--------|
+| `src/setup-git-identity.sh` | Created — identity bootstrap; EOF detection for non-TTY Docker |
+| `dotfiles/.gitconfig` | Updated — added [include] path = ~/.gitconfig.local (AC-005) |
+| `install.sh` | Updated — --non-interactive flag; source + call setup_git_identity after apply_dotfiles |
+| `tests/smoke/tests/test-git-identity-fresh.sh` | Created — AC-001 |
+| `tests/smoke/tests/test-git-identity-idempotent.sh` | Created — AC-002 + AC-004 |
+| `tests/smoke/tests/test-git-identity-non-interactive.sh` | Created — AC-003 |
+| `tests/smoke/tests/test-git-identity-standalone.sh` | Created — AC-006 |
+| `tests/smoke/run-tests.sh` | Updated — registered 4 new scenarios |
+| `specs/features/FEAT-0008-git-identity-bootstrap.yaml` | Updated — status: implemented |
+| `specs.config.yaml` | Updated — FEAT-0008 status: implemented |
+| `.ai/CONTEXT.md` | Updated — FEAT-0008 in active work and recent changes |
+| `.ai/architecture/ARCHITECTURE.md` | Updated — component diagram, smoke test list, revision history v1.7.0 |
+| `.ai/architecture/PATTERNS.md` | Updated — --non-interactive in arg parsing; new §18 git identity pattern |
+| `.ai/memory/TRACEABILITY.md` | Updated — TR-008 status: Implemented |
+| `specs/api/_template.openapi.yaml` | Deleted — manually removed by user (unused template) |
+
+### Decisions Made
+- No ADRs created (no architectural decisions; all patterns follow established conventions)
+
+### Traceability
+- Trace IDs updated: TR-008
+- Specs referenced: specs/features/FEAT-0008-git-identity-bootstrap.yaml
+- Branch: FEAT-0008-git-identity-bootstrap | Commit: c302b57
+
+### Open Items
+- [ ] FEAT-0008 PR needs to be created and merged
+- [ ] FEAT-0009 through FEAT-0014 remain as draft specs (v1.1 and v1.2 backlog)
