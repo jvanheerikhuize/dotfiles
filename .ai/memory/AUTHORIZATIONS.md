@@ -111,7 +111,9 @@ Authorizations the AI has learned from specific user approvals or denials. Appen
 
 | ID | Category | Scope | Status | Date | Session | Origin | Notes |
 |----|----------|-------|--------|------|---------|--------|-------|
+| AUTH-001 | `git-commit` + `git-push` + `gh pr create` | Feature branches only | granted | 2026-02-26 | 001 | User explicitly requested "commit and push" and "commit and push and pr" three times | Generalization not answered; recorded scope=feature-branches per repeated explicit approval |
+|----|----------|-------|--------|------|---------|--------|-------|
 
 ---
 
-**Next AUTH number: 001**
+**Next AUTH number: 002**
