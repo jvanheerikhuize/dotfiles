@@ -91,12 +91,6 @@ _print_public_key() {
 setup_ssh_key() {
   log_step "SSH key setup"
 
-  # AC-002: key already exists — skip generation.
-  if [[ -f "$KEY_PATH" ]]; then
-    log_info "SSH key already exists: ${KEY_PATH}"
-    return 0
-  fi
-
   # DRY_RUN: preview only; make no changes.
   if [[ "$DRY_RUN" == "true" ]]; then
     log_dry_run "Would generate ${KEY_PATH} and ${PUB_PATH}"
@@ -104,15 +98,25 @@ setup_ssh_key() {
     return 0
   fi
 
-  # AC-001: generate keypair with correct permissions.
-  _ensure_ssh_dir
-  _generate_keypair
+  # AC-001 / AC-002: generate keypair if absent; skip with log if already present.
+  # key_generated tracks whether to print the public key at the end (AC-005).
+  local key_generated=false
+  if [[ -f "$KEY_PATH" ]]; then
+    log_info "SSH key already exists: ${KEY_PATH}"
+  else
+    _ensure_ssh_dir
+    _generate_keypair
+    key_generated=true
+  fi
 
-  # AC-003 / AC-004: write config only if absent.
+  # AC-003 / AC-004: config check always runs, independent of key generation.
+  # Ensures ~/.ssh/config exists even on re-runs.
   _write_ssh_config
 
-  # AC-005: print public key with instructions.
-  _print_public_key
+  # AC-005: print public key only when freshly generated.
+  if [[ "$key_generated" == "true" ]]; then
+    _print_public_key
+  fi
 }
 
 # ---------------------------------------------------------------------------
