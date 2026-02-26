@@ -64,15 +64,27 @@ EOF
 # an explicit [include] section pointing to GITCONFIG_LOCAL via absolute path.
 # A real file at ~/.gitconfig is not subject to git's symlink restrictions.
 _register_gitconfig_include() {
-  local src tmp
+  local src tmp ident_name ident_email
   # Resolve the symlink to get the base content source.
   src=$(readlink -f "${HOME}/.gitconfig" 2>/dev/null || echo "${HOME}/.gitconfig")
   tmp="${HOME}/.gitconfig.setup-$$"
+  ident_name=$(git config --file "${GITCONFIG_LOCAL}" user.name)
+  ident_email=$(git config --file "${GITCONFIG_LOCAL}" user.email)
 
-  # Build the new real ~/.gitconfig: base settings + absolute-path [include].
-  { cat "$src"; printf '\n[include]\n\tpath = %s\n' "${GITCONFIG_LOCAL}"; } > "$tmp"
+  # Build a real ~/.gitconfig:
+  #   1. Base settings (verbatim from the repo's dotfiles/.gitconfig, read via symlink).
+  #   2. [include] path = <absolute> — satisfies AC-005; also works on any system
+  #      where include processing is not restricted.
+  #   3. Direct [user] stanza — belt-and-suspenders for Ubuntu 22.04 / git 2.34
+  #      Docker environments where [include] processing is silently disabled (even
+  #      from real files) due to CVE-2022-24765 security patches.
+  # Direct settings in ~/.gitconfig are always read by `git config --global`.
+  { cat "$src"
+    printf '\n[include]\n\tpath = %s\n' "${GITCONFIG_LOCAL}"
+    printf '\n[user]\n\tname = %s\n\temail = %s\n' "${ident_name}" "${ident_email}"
+  } > "$tmp"
   mv "$tmp" "${HOME}/.gitconfig"
-  log_info "~/.gitconfig written as real file with include: ${GITCONFIG_LOCAL}"
+  log_info "~/.gitconfig written as real file (include + direct identity)"
 }
 
 # ---------------------------------------------------------------------------
