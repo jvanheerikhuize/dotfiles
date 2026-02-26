@@ -126,7 +126,7 @@ specifications:
 
   - id: "FEAT-0007"
     file: "specs/features/FEAT-0007-run-summary-report.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "medium"
     assignee: "Jerry"

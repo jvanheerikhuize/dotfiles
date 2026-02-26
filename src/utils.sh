@@ -21,7 +21,9 @@ fi
 # Logging
 # ---------------------------------------------------------------------------
 log_info() {
-  echo -e "${_GREEN}[INFO]${_RESET}  $(date '+%H:%M:%S') $*"
+  if [[ "${QUIET:-false}" != "true" ]]; then
+    echo -e "${_GREEN}[INFO]${_RESET}  $(date '+%H:%M:%S') $*"
+  fi
 }
 
 log_warn() {
@@ -34,11 +36,15 @@ log_error() {
 }
 
 log_step() {
-  echo -e "\n${_BOLD}${_CYAN}==> $*${_RESET}"
+  if [[ "${QUIET:-false}" != "true" ]]; then
+    echo -e "\n${_BOLD}${_CYAN}==> $*${_RESET}"
+  fi
 }
 
 log_dry_run() {
-  echo -e "${_CYAN}[DRY RUN]${_RESET} $(date '+%H:%M:%S') $*"
+  if [[ "${QUIET:-false}" != "true" ]]; then
+    echo -e "${_CYAN}[DRY RUN]${_RESET} $(date '+%H:%M:%S') $*"
+  fi
 }
 
 # ---------------------------------------------------------------------------

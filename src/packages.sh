@@ -24,11 +24,13 @@ install_apt_package() {
     else
       log_info "Already installed: ${pkg}"
     fi
+    SKIPPED_PACKAGES+=("${pkg}")
     return 0
   fi
 
   if [[ "${DRY_RUN:-false}" == "true" ]]; then
     log_dry_run "Would install (apt): ${pkg}"
+    INSTALLED_PACKAGES+=("${pkg}")
     return 0
   fi
 
@@ -36,6 +38,7 @@ install_apt_package() {
   if ! sudo apt-get install -y "$pkg" 2>&1; then
     log_error "apt-get failed for package: ${pkg}"
   fi
+  INSTALLED_PACKAGES+=("${pkg}")
 }
 
 # install_apt_packages <package> [<package> ...]
@@ -75,11 +78,13 @@ install_snap_package() {
     else
       log_info "Already installed (snap): ${pkg}"
     fi
+    SKIPPED_PACKAGES+=("${pkg}")
     return 0
   fi
 
   if [[ "${DRY_RUN:-false}" == "true" ]]; then
     log_dry_run "Would install (snap): ${pkg}"
+    INSTALLED_PACKAGES+=("${pkg}")
     return 0
   fi
 
@@ -87,6 +92,7 @@ install_snap_package() {
   if ! sudo snap install "$pkg"; then
     log_error "snap install failed: ${pkg}"
   fi
+  INSTALLED_PACKAGES+=("${pkg}")
 }
 
 # install_snap_packages <package> [<package> ...]
@@ -141,11 +147,13 @@ install_flatpak_package() {
     else
       log_info "Already installed (flatpak): ${id}"
     fi
+    SKIPPED_PACKAGES+=("${id}")
     return 0
   fi
 
   if [[ "${DRY_RUN:-false}" == "true" ]]; then
     log_dry_run "Would install (flatpak): ${id}"
+    INSTALLED_PACKAGES+=("${id}")
     return 0
   fi
 
@@ -153,6 +161,7 @@ install_flatpak_package() {
   if ! flatpak install -y flathub "$id"; then
     log_error "flatpak install failed: ${id}"
   fi
+  INSTALLED_PACKAGES+=("${id}")
 }
 
 # install_flatpak_packages <app-id> [<app-id> ...]
@@ -183,6 +192,7 @@ install_deb_package() {
   if [[ "$url" == http://* ]]; then
     if [[ "${FORCE:-false}" != "true" ]]; then
       log_warn "Insecure URL (http) for deb '${name}' — skipping. Use --force to override."
+      WARNINGS+=("Deb '${name}' skipped — insecure URL (http); use --force to override")
       return 0
     fi
     log_warn "Installing deb over http (--force): ${url}"
@@ -194,11 +204,13 @@ install_deb_package() {
     else
       log_info "Already installed (deb): ${name}"
     fi
+    SKIPPED_PACKAGES+=("${name}")
     return 0
   fi
 
   if [[ "${DRY_RUN:-false}" == "true" ]]; then
     log_dry_run "Would install (deb): ${name} from ${url}"
+    INSTALLED_PACKAGES+=("${name}")
     return 0
   fi
 
@@ -218,6 +230,7 @@ install_deb_package() {
   fi
 
   rm -f "$tmp_file"
+  INSTALLED_PACKAGES+=("${name}")
 }
 
 # install_deb_packages <"name\turl"> [...]
@@ -251,12 +264,14 @@ install_custom_package() {
       else
         log_info "Already satisfied (custom): ${cmd}"
       fi
+      SKIPPED_PACKAGES+=("${cmd}")
       return 0
     fi
   fi
 
   if [[ "${DRY_RUN:-false}" == "true" ]]; then
     log_dry_run "Would run (custom): ${cmd}"
+    INSTALLED_PACKAGES+=("${cmd}")
     return 0
   fi
 
@@ -264,6 +279,7 @@ install_custom_package() {
   if ! bash -c "$cmd"; then
     log_error "Custom command failed: ${cmd}"
   fi
+  INSTALLED_PACKAGES+=("${cmd}")
 }
 
 # install_custom_packages <"cmd\tcheck"> [...]

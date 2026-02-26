@@ -63,13 +63,16 @@
 ```
 install.sh (entrypoint)
 │
-├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --validate-only, --help)
+├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --validate-only, --quiet, --help)
+│
+├── trap '_on_exit' EXIT → print_summary() on all exits (FEAT-0007)
 │
 ├── src/utils.sh
-│   ├── log_info()      print timestamped info line
+│   ├── log_info()      print timestamped info line (suppressed when QUIET=true)
 │   ├── log_warn()      print warning (does not exit)
 │   ├── log_error()     print error and exit 1
-│   ├── log_dry_run()   print [DRY RUN] preview line (FEAT-0005)
+│   ├── log_step()      print section header (suppressed when QUIET=true)
+│   ├── log_dry_run()   print [DRY RUN] preview line (FEAT-0005; suppressed when QUIET=true)
 │   └── require_cmd()   assert a command exists or exit
 │
 ├── src/validate.sh (FEAT-0006)
@@ -81,14 +84,14 @@ install.sh (entrypoint)
 │   └── emit merged package lists per type
 │
 ├── src/packages.sh
-│   ├── install_apt()       sudo apt-get install -y <pkg>
-│   ├── install_snap()      sudo snap install <pkg>
-│   ├── install_flatpak()   flatpak install -y <pkg>
-│   ├── install_deb()       wget <url> → sudo dpkg -i
-│   └── install_custom()    eval <script>
+│   ├── install_apt()       sudo apt-get install -y <pkg>; → INSTALLED/SKIPPED_PACKAGES[]
+│   ├── install_snap()      sudo snap install <pkg>; → INSTALLED/SKIPPED_PACKAGES[]
+│   ├── install_flatpak()   flatpak install -y <pkg>; → INSTALLED/SKIPPED_PACKAGES[]
+│   ├── install_deb()       wget <url> → sudo dpkg -i; → INSTALLED/SKIPPED_PACKAGES[]
+│   └── install_custom()    eval <script>; → INSTALLED/SKIPPED_PACKAGES[]
 │
 └── src/dotfiles.sh
-    ├── link_dotfile()      ln -sf <repo>/dotfiles/<file> $HOME/<file>
+    ├── link_dotfile()      ln -sf <repo>/dotfiles/<file> $HOME/<file>; → LINKED/SKIPPED_DOTFILES[]
     ├── check_existing()    detect file vs symlink vs missing
     └── backup_and_link()   mv <file> <file>.bak && ln -sf
 ```
@@ -237,7 +240,9 @@ tests/smoke/
     ├── test-base-idempotency.sh  # Second run exits 0; symlinks still correct
     ├── test-base-dry-run.sh      # --dry-run: no packages installed, no symlinks created
     ├── test-validate-only.sh     # --validate-only: exits 0, "Validation passed", no changes
-    └── test-validate-invalid.sh  # invalid YAML: exits 1 with correct error messages
+    ├── test-validate-invalid.sh  # invalid YAML: exits 1 with correct error messages
+    ├── test-summary.sh           # run summary present; idempotent 0-install; dry-run labels; --quiet
+    └── test-summary-partial.sh   # partial summary + "incomplete" header on failure
 ```
 
 ### 6.2 Test Runner Behaviour
@@ -324,3 +329,4 @@ See `../decisions/` for ADRs:
 | 1.3.0 | 2026-02-25 | Jerry | FEAT-0004: added testing architecture section (Docker smoke tests) |
 | 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run() to utils diagram; --dry-run to arg list; dry-run test to smoke suite |
 | 1.5.0 | 2026-02-25 | Jerry | FEAT-0006: added src/validate.sh to component diagram; --validate-only to arg list; validation tests to smoke suite |
+| 1.6.0 | 2026-02-26 | Jerry | FEAT-0007: added summary arrays + trap + print_summary() to component diagram; --quiet to arg list; summary tests to smoke suite |

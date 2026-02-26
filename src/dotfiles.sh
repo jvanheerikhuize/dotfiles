@@ -32,6 +32,7 @@ link_dotfile() {
     else
       log_info "Already linked: ${dest}"
     fi
+    SKIPPED_DOTFILES+=("${dest} (already linked)")
     return 0
   fi
 
@@ -42,11 +43,14 @@ link_dotfile() {
         log_dry_run "Would skip: ${dest} — file exists (use --force to replace)"
       else
         log_warn "Skipping: ${dest} — already exists (use --force to replace)"
+        WARNINGS+=("${dest} — already exists, not linked (use --force to replace)")
       fi
+      SKIPPED_DOTFILES+=("${dest} (already exists — use --force to replace)")
       return 0
     fi
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
       log_dry_run "Would link: ${dest} → ${src} (replacing existing with backup)"
+      LINKED_DOTFILES+=("$dest")
       return 0
     fi
     # --force: back up then replace
@@ -55,6 +59,7 @@ link_dotfile() {
   else
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
       log_dry_run "Would link: ${dest} → ${src}"
+      LINKED_DOTFILES+=("$dest")
       return 0
     fi
   fi
@@ -64,6 +69,7 @@ link_dotfile() {
 
   ln -sf "$src" "$dest"
   log_info "Linked: ${dest} → ${src}"
+  LINKED_DOTFILES+=("$dest")
 }
 
 # ---------------------------------------------------------------------------

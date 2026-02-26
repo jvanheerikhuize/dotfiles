@@ -42,6 +42,8 @@ Scenarios:
   base-dry-run          --dry-run makes no changes and exits 0            [profile: base]
   validate-only         --validate-only exits 0 and prints Validation passed [profile: base]
   validate-invalid      Invalid YAML exits 1 with correct error messages
+  summary               Run summary is printed after a provisioning run      [profile: base]
+  summary-partial       Partial summary is printed when a run fails
 
 EOF
 }
@@ -84,6 +86,8 @@ SCENARIO_DEFS=(
   "base-dry-run|base|test-base-dry-run.sh"
   "validate-only|base|test-validate-only.sh"
   "validate-invalid|all|test-validate-invalid.sh"
+  "summary|base|test-summary.sh"
+  "summary-partial|all|test-summary-partial.sh"
 )
 
 # ---------------------------------------------------------------------------
