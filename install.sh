@@ -4,15 +4,19 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROFILES_DIR="${SCRIPT_DIR}/profiles"
-DOTFILES_DIR="${SCRIPT_DIR}/dotfiles"
+# Capture repo root before any source can overwrite SCRIPT_DIR.
+# setup-git-identity.sh and setup-ssh.sh redefine SCRIPT_DIR at global scope
+# (needed for standalone execution); using _INSTALL_ROOT makes install.sh immune.
+_INSTALL_ROOT="${SCRIPT_DIR}"
+PROFILES_DIR="${_INSTALL_ROOT}/profiles"
+DOTFILES_DIR="${_INSTALL_ROOT}/dotfiles"
 
-source "${SCRIPT_DIR}/src/utils.sh"
-source "${SCRIPT_DIR}/src/validate.sh"
-source "${SCRIPT_DIR}/src/packages.sh"
-source "${SCRIPT_DIR}/src/dotfiles.sh"
-source "${SCRIPT_DIR}/src/setup-git-identity.sh"
-source "${SCRIPT_DIR}/src/setup-ssh.sh"
+source "${_INSTALL_ROOT}/src/utils.sh"
+source "${_INSTALL_ROOT}/src/validate.sh"
+source "${_INSTALL_ROOT}/src/packages.sh"
+source "${_INSTALL_ROOT}/src/dotfiles.sh"
+source "${_INSTALL_ROOT}/src/setup-git-identity.sh"
+source "${_INSTALL_ROOT}/src/setup-ssh.sh"
 
 # ---------------------------------------------------------------------------
 # Defaults
