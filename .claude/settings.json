@@ -2,8 +2,8 @@
   "$schema": "https://claude.ai/schemas/claude-settings.json",
   "version": "1.0",
   "project": {
-    "name": "Enterprise Spec-Based Development Template",
-    "description": "Language-agnostic repository template for spec-driven development with Claude Code integration"
+    "name": "dotfiles provisioner",
+    "description": "Bash-driven Ubuntu 22.04 Stage 2 provisioner: packages, dotfiles, git identity, SSH key setup"
   },
   "preferences": {
     "codeStyle": {
@@ -25,7 +25,7 @@
   "specProcessing": {
     "validateBeforeImplement": true,
     "createFeatureBranch": true,
-    "branchNamingPattern": "spec/{spec-id}",
+    "branchNamingPattern": "feat/{spec-id}-*",
     "commitMessagePattern": "feat({spec-id}): {title}",
     "requireAllAcceptanceCriteria": true
   },
@@ -47,8 +47,7 @@
   ],
   "permissions": {
     "allow": [
-      "Bash(git commit:*)",
-      "Bash(git push -u origin feat/FEAT-0009-ssh-key-setup)"
+      "Bash(git commit:*)"
     ]
   }
 }

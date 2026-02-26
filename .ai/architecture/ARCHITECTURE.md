@@ -1,352 +1,266 @@
 # System Architecture
 
-> **For AI Assistants**: This document defines HOW the system is built. For WHAT it does, see `../specs/SPEC.md`. For WHY decisions were made, see `../decisions/`.
+> **For AI Assistants**: This document defines HOW the provisioner is built. For WHAT it does, see `../CONTEXT.md`. For WHY decisions were made, see `../decisions/`.
 
 ## Document Info
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0.0 |
-| Status | Draft |
-| Last Updated | YYYY-MM-DD |
-| Owner | [Team/Person] |
+| Version | 1.1.0 |
+| Status | Current |
+| Last Updated | 2026-02-26 |
+| Owner | Jerry van Heerikhuize |
 
 ---
 
 ## 1. Architecture Overview
 
+This is a **single-machine CLI provisioner**. There is no network service, no database, and no API. The entire system is a set of Bash scripts that run on a fresh Ubuntu 22.04 host to configure it to a declared state.
+
 ### 1.1 System Context
-<!-- Highest level view: the system and its environment -->
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                     External Systems                         │
-├─────────────────────────────────────────────────────────────┤
-│  [Identity Provider]    [Payment Service]    [Email Service] │
-└──────────┬─────────────────────┬─────────────────┬──────────┘
-           │                     │                 │
-           ▼                     ▼                 ▼
+│                     Operator (Jerry)                         │
+│         runs:  bash install.sh --profile <name>             │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    [SYSTEM NAME]                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │   Web App   │  │   API       │  │   Workers   │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-│                          │                                   │
-│                    ┌─────┴─────┐                            │
-│                    │ Database  │                            │
-│                    └───────────┘                            │
-└─────────────────────────────────────────────────────────────┘
-           ▲                     ▲                 ▲
-           │                     │                 │
-┌──────────┴─────────────────────┴─────────────────┴──────────┐
-│  [Web Users]           [Mobile Users]        [API Clients]   │
+│                     install.sh (entrypoint)                  │
+│  Reads CLI flags → loads profile YAML → sources modules     │
+│  → installs packages → symlinks dotfiles → runs bootstrap   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ writes / symlinks to
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  $HOME / System                              │
+│  ~/.bashrc  ~/.gitconfig  ~/.ssh/  apt packages  snaps  … │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ### 1.2 Architecture Style
-<!-- What architectural pattern(s) does this system follow? -->
 
 | Aspect | Choice | Rationale |
 |--------|--------|-----------|
-| Overall Style | [Monolith / Microservices / Serverless / Hybrid] | [Why] |
-| API Style | [REST / GraphQL / gRPC] | [Why] |
-| Data Architecture | [Single DB / Polyglot / Event Sourced] | [Why] |
-| Deployment | [Containers / Serverless / VMs] | [Why] |
+| Overall style | Shell script library | No runtime deps beyond Bash + python3 |
+| Config format | YAML (profiles) | Human-readable, supports inheritance |
+| Config parsing | `python3` inline | Already available on Ubuntu 22.04, no extra install |
+| Testing | Docker smoke tests | Reproducible, isolated, CI-compatible |
 
 ---
 
 ## 2. Component Architecture
 
-### 2.1 Component Diagram
-<!-- Main components and their relationships -->
+### 2.1 Component Map
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Presentation Layer                      │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  Web UI     │  │  Mobile App │  │  Admin UI   │         │
-│  │  (React)    │  │  (Native)   │  │  (React)    │         │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
-└─────────┼────────────────┼────────────────┼─────────────────┘
-          │                │                │
-          ▼                ▼                ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       API Gateway                            │
-│  [Authentication] [Rate Limiting] [Routing] [Logging]       │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-          ┌──────────────────┼──────────────────┐
-          ▼                  ▼                  ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│  User Service   │ │  Core Service   │ │ Notification    │
-│                 │ │                 │ │    Service      │
-│ - Auth          │ │ - Business      │ │ - Email         │
-│ - Profile       │ │   Logic         │ │ - Push          │
-│ - Preferences   │ │ - Workflows     │ │ - SMS           │
-└────────┬────────┘ └────────┬────────┘ └────────┬────────┘
-         │                   │                   │
-         ▼                   ▼                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       Data Layer                             │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
-│  │  PostgreSQL │  │   Redis     │  │  S3/Blob    │         │
-│  │  (Primary)  │  │  (Cache)    │  │  (Files)    │         │
-│  └─────────────┘  └─────────────┘  └─────────────┘         │
-└─────────────────────────────────────────────────────────────┘
+install.sh  (main entrypoint)
+    │
+    ├── source  src/utils.sh              # Logging, YAML helpers, guards
+    ├── source  src/validate.sh           # Profile YAML structure validation
+    ├── source  src/packages.sh           # Package install functions (apt/snap/flatpak/deb/custom)
+    ├── source  src/dotfiles.sh           # Dotfile symlink management
+    ├── source  src/setup-git-identity.sh # Interactive git user.name/email bootstrap
+    └── source  src/setup-ssh.sh          # ed25519 keypair, ~/.ssh/config, public key print
 ```
 
 ### 2.2 Component Descriptions
 
-| Component | Purpose | Technology | Owner |
-|-----------|---------|------------|-------|
-| Web UI | User-facing web application | React, TypeScript | Frontend Team |
-| API Gateway | Request routing, auth, rate limiting | [Kong/Nginx/Custom] | Platform Team |
-| User Service | Authentication, authorization, profiles | [Language/Framework] | Backend Team |
-| Core Service | Primary business logic | [Language/Framework] | Backend Team |
-| Notification Service | Multi-channel notifications | [Language/Framework] | Backend Team |
+| Component | File | Purpose |
+|-----------|------|---------|
+| Entrypoint | `install.sh` | Parses CLI flags, loads profile, calls all modules in order |
+| Utilities | `src/utils.sh` | Logging functions, YAML parsing helpers, safety guards |
+| Validator | `src/validate.sh` | Validates profile YAML structure before any installs |
+| Package manager | `src/packages.sh` | Installs apt / snap / flatpak / deb / custom packages |
+| Dotfile linker | `src/dotfiles.sh` | Symlinks `dotfiles/*` → `$HOME`, backs up conflicts |
+| Git bootstrap | `src/setup-git-identity.sh` | Prompts for git identity, writes `~/.gitconfig` |
+| SSH bootstrap | `src/setup-ssh.sh` | Generates ed25519 keypair, writes `~/.ssh/config` |
 
 ---
 
-## 3. Data Architecture
+## 3. Data Flow
 
-### 3.1 Data Model Overview
-<!-- Key entities and relationships -->
-
-```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│    User      │───────│   Account    │───────│   Resource   │
-├──────────────┤  1:N  ├──────────────┤  1:N  ├──────────────┤
-│ id           │       │ id           │       │ id           │
-│ email        │       │ user_id      │       │ account_id   │
-│ created_at   │       │ name         │       │ type         │
-└──────────────┘       │ plan         │       │ data         │
-                       └──────────────┘       └──────────────┘
-```
-
-### 3.2 Data Storage Strategy
-
-| Data Type | Storage | Rationale |
-|-----------|---------|-----------|
-| Transactional | PostgreSQL | ACID compliance, complex queries |
-| Cache | Redis | Low latency, session data |
-| Files/Media | S3/Blob | Scalable object storage |
-| Search | Elasticsearch | Full-text search capabilities |
-| Analytics | [ClickHouse/BigQuery] | Time-series, aggregations |
-
-### 3.3 Data Flow
-<!-- How data moves through the system -->
+### 3.1 Happy-Path Execution Order
 
 ```
-[User Input] → [API Gateway] → [Validation] → [Business Logic] → [Database]
-                                                      │
-                                                      ▼
-                                              [Event Published]
-                                                      │
-                                    ┌─────────────────┼─────────────────┐
-                                    ▼                 ▼                 ▼
-                              [Analytics]      [Notifications]    [Webhooks]
+CLI invocation
+    │
+    ▼
+parse_args()                    # install.sh — sets DRY_RUN, PROFILE, DOTFILES_ONLY, …
+    │
+    ▼
+require_not_root()              # src/utils.sh — abort if running as root
+    │
+    ▼
+validate_profiles()             # src/validate.sh — check YAML structure; exit on error
+    │
+    ▼
+load_profile()                  # install.sh — reads profiles/<name>.yaml + all extends:
+    │
+    ▼
+deduplicate_packages()          # install.sh — merge inherited + own package lists
+    │
+    ▼
+install_packages()              # src/packages.sh — apt → snap → flatpak → deb → custom
+    │
+    ▼
+apply_dotfiles()                # src/dotfiles.sh — symlink dotfiles/* → $HOME
+    │
+    ▼
+setup_git_identity()            # src/setup-git-identity.sh — prompt / write ~/.gitconfig
+    │
+    ▼
+setup_ssh_key()                 # src/setup-ssh.sh — generate key / write config / print pubkey
+    │
+    ▼
+print_summary()                 # install.sh — installed / skipped / linked / warnings table
 ```
+
+### 3.2 Flag Effects on Data Flow
+
+| Flag | Effect |
+|------|--------|
+| `--dry-run` | All write operations replaced with `log_dry_run` no-ops |
+| `--dotfiles-only` | Skips `install_packages()` entirely |
+| `--skip-dotfiles` | Skips `apply_dotfiles()` entirely |
+| `--validate-only` | Exits after `validate_profiles()` |
+| `--non-interactive` | Skips interactive prompts in git/SSH bootstrap scripts |
+| `--force` | `apply_dotfiles()` overwrites existing files (backs up as `.bak`) |
+| `--quiet` | Suppresses `log_info` and `log_step`; errors still shown |
 
 ---
 
-## 4. Integration Architecture
+## 4. Profile Architecture
 
-### 4.1 External Integrations
+### 4.1 Profile Inheritance
 
-| System | Purpose | Protocol | Auth | Status |
-|--------|---------|----------|------|--------|
-| [Auth0/Okta] | Identity | OAuth 2.0 | API Key | Active |
-| [Stripe] | Payments | REST | Secret Key | Active |
-| [SendGrid] | Email | REST | API Key | Active |
-| [Twilio] | SMS | REST | API Key | Planned |
+Profiles extend each other via the `extends:` key. Inheritance is additive — child profiles add to parent package lists; they do not override them.
 
-### 4.2 API Contracts
-<!-- Where to find API specifications -->
+```
+base.yaml       ← foundation: core apt packages, shell dotfiles
+    ↑
+desktop.yaml    ← extends base: GUI tools, fonts, desktop apps
+    ↑
+dev.yaml        ← extends desktop: developer tools, IDEs, SDKs
 
-- **Internal APIs**: `specs/api/` (OpenAPI 3.1)
-- **External Webhooks**: `specs/webhooks/`
-- **Event Schemas**: `specs/events/`
+base.yaml       ← (also parent of)
+    ↑
+server.yaml     ← extends base: server/ops tools, no GUI
+```
 
-### 4.3 Event Architecture
-<!-- If using events/messaging -->
+### 4.2 Profile YAML Structure
 
-| Event | Publisher | Subscribers | Schema |
-|-------|-----------|-------------|--------|
-| `user.created` | User Service | Notification, Analytics | `events/user.json` |
-| `order.completed` | Core Service | Notification, Billing | `events/order.json` |
+```yaml
+name: "base"
+extends: []          # or: ["desktop"] for child profiles
+
+packages:
+  apt:
+    - git
+    - curl
+    - openssh-client
+  snap:
+    - name: "some-snap"
+      classic: true
+  flatpak: []
+  deb: []
+  custom: []
+
+dotfiles:
+  - src: ".bashrc"
+    dest: "~/.bashrc"
+```
+
+### 4.3 Package Type Processing Order
+
+```
+apt   → snap   → flatpak   → deb   → custom
+```
+
+Each type is processed only if its list is non-empty. `deb` packages are downloaded to a temp dir and installed with `dpkg -i`. `custom` entries are raw shell commands.
 
 ---
 
-## 5. Infrastructure Architecture
+## 5. Source Chain and `SCRIPT_DIR` Safety
 
-### 5.1 Deployment Diagram
+### 5.1 The Problem
 
+Every Bash script defines `SCRIPT_DIR` at global scope (needed for standalone execution). When `install.sh` sources a script (e.g. `src/setup-git-identity.sh`), that script's `SCRIPT_DIR` assignment overwrites `install.sh`'s own `SCRIPT_DIR`. Subsequent sources using `${SCRIPT_DIR}/src/...` then resolve incorrectly.
+
+### 5.2 The Fix
+
+`install.sh` captures the repo root into `_INSTALL_ROOT` **before** any source calls:
+
+```bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_INSTALL_ROOT="${SCRIPT_DIR}"   # immune to source clobbering
+
+PROFILES_DIR="${_INSTALL_ROOT}/profiles"
+DOTFILES_DIR="${_INSTALL_ROOT}/dotfiles"
+
+source "${_INSTALL_ROOT}/src/utils.sh"
+source "${_INSTALL_ROOT}/src/validate.sh"
+# … all other sources use _INSTALL_ROOT …
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        Cloud Provider                        │
-├─────────────────────────────────────────────────────────────┤
-│  Region: [us-east-1]                                        │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  VPC: Production                                     │   │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │   │
-│  │  │ Public      │  │ Private     │  │ Data        │ │   │
-│  │  │ Subnet      │  │ Subnet      │  │ Subnet      │ │   │
-│  │  │             │  │             │  │             │ │   │
-│  │  │ [ALB]       │  │ [ECS/K8s]   │  │ [RDS]       │ │   │
-│  │  │ [NAT]       │  │ [Workers]   │  │ [ElastiCache│ │   │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘ │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
 
-### 5.2 Environment Strategy
-
-| Environment | Purpose | Data | Access |
-|-------------|---------|------|--------|
-| Development | Local development | Synthetic | Developers |
-| Staging | Integration testing | Sanitized copy | Team |
-| Production | Live system | Real | Restricted |
-
-### 5.3 Scaling Strategy
-
-| Component | Scaling Type | Trigger | Limits |
-|-----------|--------------|---------|--------|
-| API Servers | Horizontal | CPU > 70% | 2-20 instances |
-| Workers | Horizontal | Queue depth > 100 | 1-10 instances |
-| Database | Vertical + Read Replicas | Manual | [Size limits] |
+All sourced scripts continue to define their own `SCRIPT_DIR` (for standalone use). `install.sh` never uses `SCRIPT_DIR` after the initial capture.
 
 ---
 
-## 6. Security Architecture
+## 6. Test Architecture
 
-### 6.1 Security Layers
+### 6.1 Smoke Test Framework
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      WAF / DDoS Protection                   │
-├─────────────────────────────────────────────────────────────┤
-│                      API Gateway (Auth)                      │
-├─────────────────────────────────────────────────────────────┤
-│                   Application Security                       │
-│  [Input Validation] [Output Encoding] [CSRF] [Rate Limiting]│
-├─────────────────────────────────────────────────────────────┤
-│                      Data Security                           │
-│  [Encryption at Rest] [Encryption in Transit] [Key Mgmt]    │
-├─────────────────────────────────────────────────────────────┤
-│                   Infrastructure Security                    │
-│  [Network Isolation] [IAM] [Secrets Management] [Logging]   │
-└─────────────────────────────────────────────────────────────┘
+tests/smoke/
+├── Dockerfile          # ubuntu:22.04 base + sudo + git + python3 + openssh-client
+├── run-tests.sh        # Build image, run each scenario, report pass/fail count
+├── helpers.sh          # _pass, _fail, finish, assert_file_perms, assert_file_contains, …
+└── tests/              # One script per test scenario
+    ├── test-base.sh
+    ├── test-dry-run.sh
+    ├── test-dotfiles-only.sh
+    ├── test-validate-only.sh
+    ├── test-git-identity-fresh.sh
+    ├── test-git-identity-idempotent.sh
+    ├── test-ssh-key-fresh.sh
+    ├── test-ssh-key-idempotent.sh
+    ├── test-ssh-key-standalone.sh
+    └── test-ssh-key-dry-run.sh
 ```
 
-### 6.2 Authentication & Authorization
+### 6.2 Test Execution Model
 
-| Aspect | Implementation |
-|--------|----------------|
-| User Auth | OAuth 2.0 / OIDC via [Provider] |
-| Service Auth | mTLS / API Keys |
-| Authorization | RBAC with [permissions model] |
-| Session | JWT with [expiry] refresh tokens |
+Each scenario is a **fresh `docker run`** against a pre-built image. The image bakes the entire working tree at build time (`COPY . /home/testuser/dotfiles`). There is no package caching between scenarios — packages installed in one scenario are NOT available in another.
 
-### 6.3 Data Classification
+**Consequence**: Any tool required by a test that runs `--dotfiles-only` (skipping `apt install`) must be pre-installed in the Dockerfile bootstrap layer.
 
-| Classification | Examples | Controls |
-|----------------|----------|----------|
-| Public | Marketing content | None |
-| Internal | Business metrics | Auth required |
-| Confidential | User PII | Encryption, audit logs |
-| Restricted | Payment data | Encryption, PCI compliance |
+### 6.3 Known Constraints
+
+| Constraint | Reason | Workaround |
+|------------|--------|------------|
+| `--force` required in tests | `useradd -m` pre-creates `/etc/skel` copies | Always pass `--force` in smoke tests |
+| `openssh-client` in Dockerfile | SSH tests use `--dotfiles-only` | Pre-install in Dockerfile RUN layer |
+| `NON_INTERACTIVE=true` needed | Docker has no TTY for prompts | Export before running install.sh |
 
 ---
 
-## 7. Observability
+## 7. Architecture Decision Records
 
-### 7.1 Monitoring Stack
+See [`../decisions/`](../decisions/) for full ADRs. Key decisions:
 
-| Capability | Tool | Purpose |
-|------------|------|---------|
-| Metrics | [Prometheus/CloudWatch] | System and business metrics |
-| Logging | [ELK/CloudWatch Logs] | Centralized log aggregation |
-| Tracing | [Jaeger/X-Ray] | Distributed tracing |
-| Alerting | [PagerDuty/OpsGenie] | Incident notification |
-
-### 7.2 Key Metrics
-
-| Metric | Target | Alert Threshold |
-|--------|--------|-----------------|
-| API Latency (P95) | < 200ms | > 500ms |
-| Error Rate | < 0.1% | > 1% |
-| Availability | 99.9% | < 99.5% |
-| CPU Utilization | < 70% | > 85% |
-
-### 7.3 Logging Standards
-
-```json
-{
-  "timestamp": "ISO8601",
-  "level": "INFO|WARN|ERROR",
-  "service": "service-name",
-  "trace_id": "uuid",
-  "message": "Human readable message",
-  "context": { "user_id": "...", "request_id": "..." }
-}
-```
+| ADR | Decision | Status |
+|-----|----------|--------|
+| ADR-001 | Use ed25519 key type for SSH keypair | Accepted |
+| ADR-002 | No passphrase in non-interactive SSH key generation | Accepted |
+| ADR-003 | Add `openssh-client` to base profile (not just Dockerfile) | Accepted |
 
 ---
 
-## 8. Development Standards
-
-### 8.1 Code Organization
-
-```
-src/
-├── api/              # API route handlers
-├── services/         # Business logic
-├── models/           # Data models
-├── repositories/     # Data access
-├── utils/            # Shared utilities
-├── config/           # Configuration
-└── tests/            # Test files
-```
-
-### 8.2 Key Patterns
-
-| Pattern | Usage | Example |
-|---------|-------|---------|
-| Repository | Data access abstraction | `UserRepository.findById()` |
-| Service | Business logic encapsulation | `AuthService.authenticate()` |
-| Factory | Object creation | `NotificationFactory.create()` |
-| Strategy | Algorithm selection | `PaymentStrategy` |
-
-### 8.3 Cross-Cutting Concerns
-
-| Concern | Implementation |
-|---------|----------------|
-| Error Handling | [Pattern - e.g., Result types, exceptions] |
-| Validation | [Library/approach] |
-| Logging | [Library] with structured format |
-| Configuration | Environment variables + [config library] |
-
----
-
-## 9. Appendix
-
-### A. Technology Radar
-
-| Technology | Status | Notes |
-|------------|--------|-------|
-| [Tech 1] | Adopt | Production ready |
-| [Tech 2] | Trial | Evaluating |
-| [Tech 3] | Hold | Not recommended |
-
-### B. Architecture Decision Records
-
-See `../decisions/` for detailed ADRs:
-- ADR-001: [Decision title]
-- ADR-002: [Decision title]
-
-### C. Revision History
+## 8. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0.0 | YYYY-MM-DD | [Name] | Initial version |
+| 1.0.0 | 2026-02-26 | Jerry van Heerikhuize | Initial real content (FEAT-0016) |
+| 1.1.0 | 2026-02-26 | Jerry van Heerikhuize | Added §5 source chain safety, §6 test constraints |

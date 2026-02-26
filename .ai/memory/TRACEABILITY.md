@@ -22,12 +22,13 @@ Use the next sequential TR-NNN ID. Fill in what you know; leave unknowns as `—
 
 | ID | Request | Spec | ADR | Key Files Changed | PR / Commit | Status |
 |----|---------|------|-----|-------------------|-------------|--------|
-| TR-001 | Implement FEAT-0009 SSH Key Setup | `specs/features/FEAT-0009-ssh-key-setup.yaml` | — | `src/setup-ssh.sh`, `install.sh`, `profiles/base.yaml`, `tests/smoke/` | feat/FEAT-0009-ssh-key-setup | In Progress |
+| TR-001 | Implement FEAT-0009 SSH Key Setup | `specs/features/FEAT-0009-ssh-key-setup.yaml` | ADR-001, ADR-002, ADR-003 (retrospective, created via TR-002) | `src/setup-ssh.sh`, `install.sh`, `profiles/base.yaml`, `tests/smoke/` | PR #10 (merged) | Merged |
+| TR-002 | Harden .ai/ governance files with real project content (FEAT-0016) | `specs/features/FEAT-0016-ai-context-and-directives-hardening.yaml` | — | `.ai/DIRECTIVES.md`, `.ai/CONTEXT.md`, `.ai/architecture/ARCHITECTURE.md`, `.ai/architecture/PATTERNS.md`, `.claude/settings.json`, `.ai/decisions/ADR-001..003`, `.ai/decisions/INDEX.md` | feat/FEAT-0016-ai-context-and-directives-hardening (in progress) | In Progress |
 |----|---------|------|-----|-------------------|-------------|--------|
 
 ---
 
-**Next TR ID: 002**
+**Next TR ID: 003**
 
 ---
 
