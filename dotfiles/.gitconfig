@@ -43,3 +43,12 @@
 	co  = checkout
 	br  = branch
 	lg  = log --oneline --graph --decorate --all
+
+# ---------------------------------------------------------------------------
+# Local identity (FEAT-0008)
+# ---------------------------------------------------------------------------
+[include]
+	# Machine-local git identity: name and email set by src/setup-git-identity.sh.
+	# This file is NOT tracked in the repo and NOT symlinked — it lives only in $HOME.
+	# Silently ignored by git if the file does not yet exist (safe on fresh installs).
+	path = ~/.gitconfig.local

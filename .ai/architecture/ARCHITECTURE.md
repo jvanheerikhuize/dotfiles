@@ -63,7 +63,7 @@
 ```
 install.sh (entrypoint)
 │
-├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --validate-only, --quiet, --help)
+├── parse args (--profile, --skip-dotfiles, --dotfiles-only, --force, --dry-run, --validate-only, --quiet, --non-interactive, --help)
 │
 ├── trap '_on_exit' EXIT → print_summary() on all exits (FEAT-0007)
 │
@@ -90,10 +90,13 @@ install.sh (entrypoint)
 │   ├── install_deb()       wget <url> → sudo dpkg -i; → INSTALLED/SKIPPED_PACKAGES[]
 │   └── install_custom()    eval <script>; → INSTALLED/SKIPPED_PACKAGES[]
 │
-└── src/dotfiles.sh
-    ├── link_dotfile()      ln -sf <repo>/dotfiles/<file> $HOME/<file>; → LINKED/SKIPPED_DOTFILES[]
-    ├── check_existing()    detect file vs symlink vs missing
-    └── backup_and_link()   mv <file> <file>.bak && ln -sf
+├── src/dotfiles.sh
+│   ├── link_dotfile()      ln -sf <repo>/dotfiles/<file> $HOME/<file>; → LINKED/SKIPPED_DOTFILES[]
+│   ├── check_existing()    detect file vs symlink vs missing
+│   └── backup_and_link()   mv <file> <file>.bak && ln -sf
+│
+└── src/setup-git-identity.sh (FEAT-0008)
+    └── setup_git_identity()  check git config → prompt or warn → write ~/.gitconfig.local
 ```
 
 ### 2.2 Component Descriptions
@@ -105,6 +108,7 @@ install.sh (entrypoint)
 | Validator | `src/validate.sh` | Pre-install YAML structure validation (FEAT-0006) |
 | Package installer | `src/packages.sh` | One function per package type |
 | Dotfile manager | `src/dotfiles.sh` | Symlink creation, collision handling |
+| Git identity | `src/setup-git-identity.sh` | Prompt for name/email; write ~/.gitconfig.local (FEAT-0008) |
 | Profile manifests | `profiles/*.yaml` | Declarative package lists per profile |
 | Dotfiles | `dotfiles/` | Actual config files to symlink into $HOME |
 
@@ -241,8 +245,12 @@ tests/smoke/
     ├── test-base-dry-run.sh      # --dry-run: no packages installed, no symlinks created
     ├── test-validate-only.sh     # --validate-only: exits 0, "Validation passed", no changes
     ├── test-validate-invalid.sh  # invalid YAML: exits 1 with correct error messages
-    ├── test-summary.sh           # run summary present; idempotent 0-install; dry-run labels; --quiet
-    └── test-summary-partial.sh   # partial summary + "incomplete" header on failure
+    ├── test-summary.sh                    # run summary present; idempotent 0-install; dry-run labels; --quiet
+    ├── test-summary-partial.sh            # partial summary + "incomplete" header on failure
+    ├── test-git-identity-fresh.sh         # first-time prompt writes ~/.gitconfig.local; git config returns values
+    ├── test-git-identity-idempotent.sh    # second run skips prompt; ~/.gitconfig.local unchanged
+    ├── test-git-identity-non-interactive.sh  # --non-interactive warns; no file created
+    └── test-git-identity-standalone.sh   # src/setup-git-identity.sh works without install.sh
 ```
 
 ### 6.2 Test Runner Behaviour
@@ -330,3 +338,4 @@ See `../decisions/` for ADRs:
 | 1.4.0 | 2026-02-25 | Jerry | FEAT-0005: added log_dry_run() to utils diagram; --dry-run to arg list; dry-run test to smoke suite |
 | 1.5.0 | 2026-02-25 | Jerry | FEAT-0006: added src/validate.sh to component diagram; --validate-only to arg list; validation tests to smoke suite |
 | 1.6.0 | 2026-02-26 | Jerry | FEAT-0007: added summary arrays + trap + print_summary() to component diagram; --quiet to arg list; summary tests to smoke suite |
+| 1.7.0 | 2026-02-26 | Jerry | FEAT-0008: added src/setup-git-identity.sh to component diagram; --non-interactive to arg list; git identity tests to smoke suite |

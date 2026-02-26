@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # dotfiles — Stage 2 Ubuntu provisioner
-# Usage: ./install.sh [--profile PROFILE] [--skip-dotfiles] [--dotfiles-only] [--force] [--dry-run] [--validate-only] [--quiet] [--help]
+# Usage: ./install.sh [--profile PROFILE] [--skip-dotfiles] [--dotfiles-only] [--force] [--dry-run] [--validate-only] [--quiet] [--non-interactive] [--help]
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,6 +11,7 @@ source "${SCRIPT_DIR}/src/utils.sh"
 source "${SCRIPT_DIR}/src/validate.sh"
 source "${SCRIPT_DIR}/src/packages.sh"
 source "${SCRIPT_DIR}/src/dotfiles.sh"
+source "${SCRIPT_DIR}/src/setup-git-identity.sh"
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -22,6 +23,7 @@ FORCE=false
 DRY_RUN=false
 VALIDATE_ONLY=false
 QUIET=false
+NON_INTERACTIVE=false
 
 # Global arrays populated by load_profile()
 APT_PACKAGES=()
@@ -59,6 +61,7 @@ Options:
   --dry-run            Preview what would be installed/linked; make no changes
   --validate-only      Validate profile YAML structure only; skip all installs and dotfiles
   --quiet              Suppress per-step log lines; summary is always shown
+  --non-interactive    Skip git identity prompt; emit a warning instead
   --help               Show this help and exit
 
 Profiles available: $(ls "${PROFILES_DIR}"/*.yaml 2>/dev/null | xargs -I{} basename {} .yaml | tr '\n' ' ')
@@ -107,6 +110,10 @@ parse_args() {
         ;;
       --quiet)
         QUIET=true
+        shift
+        ;;
+      --non-interactive)
+        NON_INTERACTIVE=true
         shift
         ;;
       --help|-h)
@@ -313,11 +320,12 @@ main() {
   log_info "Profile:  ${PROFILE}"
   log_info "Repo:     ${SCRIPT_DIR}"
   log_info "Home:     ${HOME}"
-  if [[ "$FORCE" == "true" ]]; then         log_info "Mode:     --force (will replace existing dotfiles)"; fi
-  if [[ "$SKIP_DOTFILES" == "true" ]]; then log_info "Mode:     --skip-dotfiles"; fi
-  if [[ "$DOTFILES_ONLY" == "true" ]]; then log_info "Mode:     --dotfiles-only"; fi
-  if [[ "$DRY_RUN" == "true" ]]; then       log_info "Mode:     --dry-run (no changes will be made)"; fi
-  if [[ "$VALIDATE_ONLY" == "true" ]]; then log_info "Mode:     --validate-only"; fi
+  if [[ "$FORCE" == "true" ]]; then            log_info "Mode:     --force (will replace existing dotfiles)"; fi
+  if [[ "$SKIP_DOTFILES" == "true" ]]; then    log_info "Mode:     --skip-dotfiles"; fi
+  if [[ "$DOTFILES_ONLY" == "true" ]]; then    log_info "Mode:     --dotfiles-only"; fi
+  if [[ "$DRY_RUN" == "true" ]]; then          log_info "Mode:     --dry-run (no changes will be made)"; fi
+  if [[ "$VALIDATE_ONLY" == "true" ]]; then    log_info "Mode:     --validate-only"; fi
+  if [[ "$NON_INTERACTIVE" == "true" ]]; then  log_info "Mode:     --non-interactive"; fi
 
   # Validate profile YAML structure (before loading or installing)
   log_step "Validating profile"
@@ -362,9 +370,10 @@ main() {
     log_info "Skipping package installation (--dotfiles-only)"
   fi
 
-  # Apply dotfiles
+  # Apply dotfiles, then bootstrap git identity (identity depends on linked .gitconfig)
   if [[ "$SKIP_DOTFILES" != "true" ]]; then
     apply_dotfiles "$DOTFILES_DIR" "$HOME" "$FORCE"
+    setup_git_identity
   else
     log_info "Skipping dotfiles (--skip-dotfiles)"
   fi

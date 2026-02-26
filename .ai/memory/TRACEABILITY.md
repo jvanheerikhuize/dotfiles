@@ -29,10 +29,11 @@ Use the next sequential TR-NNN ID. Fill in what you know; leave unknowns as `—
 | TR-005 | --dry-run mode: preview installs and symlinks without executing | [FEAT-0005](../../specs/features/FEAT-0005-dry-run-mode.yaml) | — | `install.sh`, `src/packages.sh`, `src/dotfiles.sh`, `src/utils.sh`, `tests/smoke/tests/test-base-dry-run.sh` | [PR #5](https://github.com/jvanheerikhuize/dotfiles/pull/5) | Merged |
 | TR-006 | Profile YAML validation: validate_profiles() + --validate-only flag | [FEAT-0006](../../specs/features/FEAT-0006-profile-yaml-validation.yaml) | — | `src/validate.sh`, `install.sh`, `tests/smoke/tests/test-validate-only.sh`, `tests/smoke/tests/test-validate-invalid.sh` | [PR #6](https://github.com/jvanheerikhuize/dotfiles/pull/6) | Merged |
 | TR-007 | AI governance system: DIRECTIVES.md, memory system, ADR infrastructure, template-sync runbook | [FEAT-0015](../../specs/features/FEAT-0015-ai-governance-system.yaml) | — | `.ai/DIRECTIVES.md`, `.ai/memory/`, `.ai/decisions/README.md`, `.ai/decisions/INDEX.md`, `docs/runbooks/template-sync.md`, `.claude/CLAUDE.md` | [PR #7](https://github.com/jvanheerikhuize/dotfiles/pull/7) | In Progress |
+| TR-008 | Git identity bootstrap: prompt for name/email after dotfiles; write ~/.gitconfig.local | [FEAT-0008](../../specs/features/FEAT-0008-git-identity-bootstrap.yaml) | — | `src/setup-git-identity.sh`, `dotfiles/.gitconfig`, `install.sh`, `tests/smoke/tests/test-git-identity-*.sh` | — | Implemented |
 
 ---
 
-**Next TR ID: 008**
+**Next TR ID: 009**
 
 ---
 
