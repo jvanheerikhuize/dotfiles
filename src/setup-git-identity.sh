@@ -51,21 +51,28 @@ EOF
   log_info "Git identity written to ${GITCONFIG_LOCAL}"
 }
 
-# Ensure ~/.gitconfig has an [include] pointing to GITCONFIG_LOCAL.
+# Ensure ~/.gitconfig is a real file that includes GITCONFIG_LOCAL.
 #
-# When ~/.gitconfig is a symlink (e.g. managed by dotfiles.sh), git config
-# cannot reliably follow [include] directives inside the symlink target when
-# that target lives inside another git repository (git 2.34 / Ubuntu 22.04).
-# Calling `git config --global include.path` reads the symlink target and
-# re-writes ~/.gitconfig as a real file via rename(2), replacing the tilde
-# path with the absolute path supplied here.  Subsequent `git config --global`
-# calls read a real file and follow [include] correctly.
+# On Ubuntu 22.04 (git 2.34), when ~/.gitconfig is a symlink whose target
+# lives inside another git repository, git silently refuses to:
+#   - follow [include] directives from that symlink target, and
+#   - write through the symlink via `git config --global`.
+# Both failures are silent (exit 0), which makes them hard to debug.
 #
-# If ~/.gitconfig is already a real file the call is still safe — it either
-# replaces an existing include.path entry or adds a new one.
+# Fix: use direct shell I/O to replace the symlink with a real file that
+# contains the base settings (copied verbatim from the symlink target) plus
+# an explicit [include] section pointing to GITCONFIG_LOCAL via absolute path.
+# A real file at ~/.gitconfig is not subject to git's symlink restrictions.
 _register_gitconfig_include() {
-  git config --global include.path "${GITCONFIG_LOCAL}"
-  log_info "Include path registered: ${GITCONFIG_LOCAL}"
+  local src tmp
+  # Resolve the symlink to get the base content source.
+  src=$(readlink -f "${HOME}/.gitconfig" 2>/dev/null || echo "${HOME}/.gitconfig")
+  tmp="${HOME}/.gitconfig.setup-$$"
+
+  # Build the new real ~/.gitconfig: base settings + absolute-path [include].
+  { cat "$src"; printf '\n[include]\n\tpath = %s\n' "${GITCONFIG_LOCAL}"; } > "$tmp"
+  mv "$tmp" "${HOME}/.gitconfig"
+  log_info "~/.gitconfig written as real file with include: ${GITCONFIG_LOCAL}"
 }
 
 # ---------------------------------------------------------------------------
@@ -126,8 +133,8 @@ setup_git_identity() {
 
   _write_gitconfig_local "$name" "$email"
   _register_gitconfig_include
-  log_info "git config user.name  = $(git config --file "${GITCONFIG_LOCAL}" user.name 2>/dev/null || echo '(pending)')"
-  log_info "git config user.email = $(git config --file "${GITCONFIG_LOCAL}" user.email 2>/dev/null || echo '(pending)')"
+  log_info "git config user.name  = $(git config --global user.name 2>/dev/null || echo '(pending)')"
+  log_info "git config user.email = $(git config --global user.email 2>/dev/null || echo '(pending)')"
 }
 
 # ---------------------------------------------------------------------------
