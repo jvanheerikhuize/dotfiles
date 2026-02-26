@@ -44,5 +44,11 @@
     "README.md",
     "specs.config.yaml",
     "CONTRIBUTING.md"
-  ]
+  ],
+  "permissions": {
+    "allow": [
+      "Bash(git commit:*)",
+      "Bash(git push -u origin feat/FEAT-0009-ssh-key-setup)"
+    ]
+  }
 }

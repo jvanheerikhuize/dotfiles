@@ -236,6 +236,19 @@ specifications:
       - "documentation"
       - "template-sync"
 
+  - id: "FEAT-0016"
+    file: "specs/features/FEAT-0016-ai-context-and-directives-hardening.yaml"
+    status: "draft"
+    auto_implement: false
+    priority: "high"
+    assignee: "Jerry"
+    target_version: "1.1.0"
+    notes: "Fill all .ai/ template placeholders with real project content; harden DIRECTIVES.md with concrete pre-commit checklist and domain rules"
+    labels:
+      - "ai"
+      - "governance"
+      - "documentation"
+
 # Spec categories for organization
 categories:
   features:
