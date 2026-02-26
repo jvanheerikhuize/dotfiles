@@ -5,7 +5,7 @@ metadata:
   id: "FEAT-0009"
   title: "SSH Key Setup"
   version: "1.0.0"
-  status: "draft"
+  status: "implemented"
   priority: "medium"
   author: "Jerry"
   created_at: "2026-02-25"

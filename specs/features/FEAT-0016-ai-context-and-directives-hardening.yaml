@@ -1,0 +1,167 @@
+# Feature Specification: AI Context Docs and DIRECTIVES.md Hardening
+# Validate against: specs/schemas/feature-spec.schema.json
+
+metadata:
+  id: "FEAT-0016"
+  title: "AI Context Docs and DIRECTIVES.md Hardening"
+  version: "1.0.0"
+  status: "draft"
+  priority: "high"
+  author: "Jerry"
+  created_at: "2026-02-26"
+  updated_at: "2026-02-26"
+  tags:
+    - ai
+    - governance
+    - documentation
+    - directives
+
+description:
+  summary: |
+    Replace all template-placeholder content in .ai/ with real, project-specific
+    content, and strengthen DIRECTIVES.md so that AI assistants cannot silently
+    skip mandatory pre-commit steps (architecture file updates, ADR creation).
+
+  problem_statement: |
+    During FEAT-0009 implementation, the AI skipped two mandatory steps:
+    1. Updating .ai/CONTEXT.md, ARCHITECTURE.md, and PATTERNS.md before committing
+       (required by CLAUDE.md but not enforced in DIRECTIVES.md).
+    2. Creating ADRs for qualifying decisions (technology choice: openssh-client;
+       security-relevant: no-passphrase default in non-interactive mode).
+
+    Root cause: all five governance files (DIRECTIVES.md, CONTEXT.md,
+    ARCHITECTURE.md, PATTERNS.md, and .claude/CLAUDE.md) still contain the
+    generic template boilerplate from FEAT-0015. There are no project-specific
+    rules in DIRECTIVES.md — only placeholder text — so the AI has no concrete,
+    project-aware directives to enforce. Similarly, CONTEXT.md and ARCHITECTURE.md
+    have no real content, making "update them before committing" a no-op.
+
+  proposed_solution: |
+    1. Rewrite DIRECTIVES.md §1-§6 with real, project-specific mandatory rules,
+       including an explicit pre-commit checklist and concrete ADR trigger examples
+       for this Bash provisioning codebase.
+    2. Fill in .ai/CONTEXT.md with the actual project identity, current state,
+       entry points, key files, and navigation guide.
+    3. Fill in .ai/architecture/ARCHITECTURE.md with the real component map,
+       data flow, and module relationships.
+    4. Fill in .ai/architecture/PATTERNS.md with the actual Bash patterns and
+       conventions used in this repo (shebang, set flags, logging functions,
+       known anti-patterns, YAML parsing idioms, etc.).
+    5. Review .claude/CLAUDE.md for any contradictions or gaps introduced by the
+       above changes and patch them.
+
+  out_of_scope:
+    - "Changing any implementation code in src/ or install.sh"
+    - "Adding new features to the provisioner"
+    - "Modifying specs/schemas/ validation"
+    - "Changing how ADRs are structured (README.md and template.md stay as-is)"
+
+  dependencies:
+    - "FEAT-0015: AI Governance System (provides the file structure this spec fills in)"
+
+acceptance_criteria:
+  - id: "AC-001"
+    given: "DIRECTIVES.md §1 (Core Directives) contains only template placeholders"
+    when: "This spec is implemented"
+    then: "§1 contains at least three numbered, project-specific mandatory rules"
+    and:
+      - "One rule explicitly forbids committing without first updating CONTEXT.md, ARCHITECTURE.md, and PATTERNS.md if any component, entry point, or pattern changed"
+      - "One rule explicitly requires an ADR for any qualifying decision (technology choice, security-relevant, hard-to-reverse, cross-cutting)"
+      - "One rule explicitly requires reading LEARNINGS.md before touching any existing src/ file"
+
+  - id: "AC-002"
+    given: "DIRECTIVES.md §3 (Required Checks Before Acting) contains placeholder checklist items"
+    when: "This spec is implemented"
+    then: "§3 contains a concrete pre-commit checklist with the following items, all actionable:"
+    and:
+      - "Confirm spec status is 'approved' before implementing"
+      - "Read .ai/memory/LEARNINGS.md before modifying any existing src/ file"
+      - "Create ADR for any decision matching the trigger list before committing"
+      - "Update CONTEXT.md, ARCHITECTURE.md, PATTERNS.md if project state changed"
+      - "Append to TRACEABILITY.md as each implementation link is established"
+      - "Append to SESSION_LOG.md at session end"
+
+  - id: "AC-003"
+    given: "DIRECTIVES.md §6 (Domain-Specific Rules) contains only template placeholders"
+    when: "This spec is implemented"
+    then: "§6 contains Bash-provisioner-specific rules including:"
+    and:
+      - "Never use [[ cond ]] && cmd as a statement under set -e — use if/then instead"
+      - "Always use return 0 (not bare return) in non-interactive shell guards"
+      - "All output must go through log_info / log_warn / log_error / log_step / log_dry_run from src/utils.sh"
+      - "Never hardcode package names in scripts — package lists belong in profiles/*.yaml"
+      - "openssh-client, not ssh, is the apt package name for the SSH client tools"
+
+  - id: "AC-004"
+    given: ".ai/CONTEXT.md contains generic template content"
+    when: "This spec is implemented"
+    then: "CONTEXT.md §1 (Project Summary) contains real project information:"
+    and:
+      - "Name: dotfiles provisioner"
+      - "Type: CLI / shell provisioner"
+      - "Stage: MVP / Growth"
+      - "Tech stack: Bash, YAML (python3 for parsing), Docker (for smoke tests)"
+      - "One-liner describes the Ubuntu 22.04 Stage 2 provisioning purpose"
+
+  - id: "AC-005"
+    given: ".ai/CONTEXT.md §2 (Current State) and §4 (Codebase Navigation) contain template content"
+    when: "This spec is implemented"
+    then: "These sections contain real project content:"
+    and:
+      - "§2 lists FEAT-0009 SSH key setup as recently completed"
+      - "§2 lists remaining v1.1 features (FEAT-0012, FEAT-0014) as active/pending"
+      - "§4 Entry Points table lists install.sh as the main entrypoint with all supported flags"
+      - "§4 Key Files lists src/utils.sh, src/packages.sh, src/dotfiles.sh, src/setup-git-identity.sh, src/setup-ssh.sh with their roles"
+
+  - id: "AC-006"
+    given: ".ai/architecture/ARCHITECTURE.md contains template content"
+    when: "This spec is implemented"
+    then: "ARCHITECTURE.md describes the actual provisioner architecture:"
+    and:
+      - "Entry point: install.sh with its flag set documented"
+      - "Component map shows: install.sh → src/utils.sh, src/validate.sh, src/packages.sh, src/dotfiles.sh, src/setup-git-identity.sh, src/setup-ssh.sh"
+      - "Data flow: CLI flags → load_profile() → deduplicate_packages() → install functions → dotfiles → bootstrap scripts"
+      - "Profile inheritance documented: base ← desktop ← dev; base ← server"
+      - "Package types documented: apt, snap, flatpak, deb, custom"
+
+  - id: "AC-007"
+    given: ".ai/architecture/PATTERNS.md contains generic TypeScript/OOP template content"
+    when: "This spec is implemented"
+    then: "PATTERNS.md describes the actual Bash patterns used in this codebase:"
+    and:
+      - "Script header pattern: #!/usr/bin/env bash + set -euo pipefail"
+      - "All functions use local variables only; no globals modified outside install.sh"
+      - "Logging: always use log_info/log_warn/log_error/log_step/log_dry_run — never echo directly"
+      - "Idempotency pattern: check state before acting (if already done, skip with log_info)"
+      - "Standalone script pattern: [[ BASH_SOURCE[0] == 0 ]] guard at bottom"
+      - "Anti-pattern documented: [[ cond ]] && cmd returns exit 1 under set -e — always use if/then"
+      - "Anti-pattern documented: bare return in non-interactive guard inherits exit code from failed test"
+      - "YAML parsing: yaml_get, yaml_get_list, yaml_get_list_pairs from src/utils.sh (python3 inline)"
+
+  - id: "AC-008"
+    given: "An AI assistant reads the updated DIRECTIVES.md"
+    when: "It is about to make a commit during a future session"
+    then: "The pre-commit checklist in §3 is concrete enough to self-audit without ambiguity"
+    and:
+      - "Each checklist item specifies which file to check or update"
+      - "The ADR trigger list in §3a includes at least one concrete example relevant to this project (e.g. 'adding a new apt package to base.yaml')"
+      - "The consequences of skipping each step are stated"
+
+testing_requirements:
+  unit_tests: false
+  integration_tests: false
+  e2e_tests: false
+  test_scenarios:
+    - "Human review: DIRECTIVES.md §1 contains ≥3 numbered, project-specific rules"
+    - "Human review: DIRECTIVES.md §3 pre-commit checklist is fully concrete (no placeholders)"
+    - "Human review: DIRECTIVES.md §6 contains the five domain-specific Bash rules"
+    - "Human review: CONTEXT.md describes this actual project, not a generic web app"
+    - "Human review: ARCHITECTURE.md matches the actual install.sh entry point and src/ structure"
+    - "Human review: PATTERNS.md contains Bash idioms, not TypeScript/OOP examples"
+
+rollout:
+  rollout_strategy: "immediate"
+  rollback_plan: |
+    All changes are to documentation files under .ai/ and .claude/.
+    Git revert of the implementation commit restores all files to their
+    template-placeholder state. No code or behaviour is affected.

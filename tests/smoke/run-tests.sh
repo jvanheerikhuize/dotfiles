@@ -48,6 +48,10 @@ Scenarios:
   git-identity-idempotent   Second run skips prompt; file unchanged          [profile: base]
   git-identity-non-interactive  --non-interactive warns, no file created     [profile: base]
   git-identity-standalone   Standalone script works without install.sh       [profile: base]
+  ssh-key-fresh             Keypair generated with correct perms + config    [profile: base]
+  ssh-key-idempotent        Existing key skipped; existing config untouched  [profile: base]
+  ssh-key-standalone        Standalone src/setup-ssh.sh works alone          [profile: base]
+  ssh-key-dry-run           --dry-run creates no SSH files                   [profile: base]
 
 EOF
 }
@@ -96,6 +100,10 @@ SCENARIO_DEFS=(
   "git-identity-idempotent|base|test-git-identity-idempotent.sh"
   "git-identity-non-interactive|base|test-git-identity-non-interactive.sh"
   "git-identity-standalone|base|test-git-identity-standalone.sh"
+  "ssh-key-fresh|base|test-ssh-key-fresh.sh"
+  "ssh-key-idempotent|base|test-ssh-key-idempotent.sh"
+  "ssh-key-standalone|base|test-ssh-key-standalone.sh"
+  "ssh-key-dry-run|base|test-ssh-key-dry-run.sh"
 )
 
 # ---------------------------------------------------------------------------

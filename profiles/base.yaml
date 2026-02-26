@@ -45,6 +45,9 @@ packages:
     - net-tools
     - dnsutils
 
+    # SSH client (provides ssh, ssh-keygen, ssh-copy-id)
+    - openssh-client
+
     # Terminal multiplexer
     - tmux
 

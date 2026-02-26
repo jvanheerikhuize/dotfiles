@@ -22,10 +22,12 @@ Use the next sequential TR-NNN ID. Fill in what you know; leave unknowns as `—
 
 | ID | Request | Spec | ADR | Key Files Changed | PR / Commit | Status |
 |----|---------|------|-----|-------------------|-------------|--------|
+| TR-001 | Implement FEAT-0009 SSH Key Setup | `specs/features/FEAT-0009-ssh-key-setup.yaml` | — | `src/setup-ssh.sh`, `install.sh`, `profiles/base.yaml`, `tests/smoke/` | feat/FEAT-0009-ssh-key-setup | In Progress |
+|----|---------|------|-----|-------------------|-------------|--------|
 
 ---
 
-**Next TR ID: 001**
+**Next TR ID: 002**
 
 ---
 

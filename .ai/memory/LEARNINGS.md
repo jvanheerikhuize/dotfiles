@@ -27,7 +27,12 @@ Append under the relevant category. Format:
 
 <!-- Things that are easy to get wrong in this specific codebase -->
 
-*No entries yet. Add the first one when you discover something non-obvious.*
+### SCRIPT_DIR clobbering in install.sh when sourcing setup-*.sh scripts
+**Discovered**: 2026-02-26 | **Session**: 001 | **Relevant files**: `install.sh`, `src/setup-git-identity.sh`, `src/setup-ssh.sh`
+
+`src/setup-git-identity.sh` and `src/setup-ssh.sh` both define `SCRIPT_DIR` at global scope so they can be run standalone. When `install.sh` sources them, their `SCRIPT_DIR` assignment overwrites the value install.sh set at the top. Any `source "${SCRIPT_DIR}/src/..."` call appearing **after** one of these sourced scripts resolves to `src/src/...` and fails silently as a missing file.
+
+**Fix**: `install.sh` captures the repo root in `_INSTALL_ROOT` immediately after setting `SCRIPT_DIR`, before any source call. All source calls and path variables use `_INSTALL_ROOT`. Any new `setup-*.sh` script added to install.sh must be sourced via `_INSTALL_ROOT`, not `SCRIPT_DIR`.
 
 ---
 

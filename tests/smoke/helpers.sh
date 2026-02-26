@@ -73,6 +73,45 @@ assert_symlink() {
   fi
 }
 
+# assert_file_perms <path> <expected_octal>
+# Passes if the file at <path> has the expected octal permissions (e.g. "600", "700").
+assert_file_perms() {
+  local path="$1"
+  local expected="$2"
+  local actual
+  actual=$(stat -c "%a" "$path" 2>/dev/null || echo "")
+  if [[ "$actual" == "$expected" ]]; then
+    _pass "Permissions ${expected}: ${path}"
+  else
+    _fail "Permissions ${expected}: ${path} (got: ${actual:-not found})"
+  fi
+}
+
+# assert_file_contains <path> <substring>
+# Passes if the file at <path> contains <substring>.
+assert_file_contains() {
+  local path="$1"
+  local substring="$2"
+  if grep -qF "$substring" "$path" 2>/dev/null; then
+    _pass "File contains '${substring}': ${path}"
+  else
+    _fail "File contains '${substring}': ${path} (not found)"
+  fi
+}
+
+# assert_output_contains <substring> <command> [args...]
+# Passes if the command's combined stdout+stderr contains <substring>.
+assert_output_contains() {
+  local substring="$1"; shift
+  local output
+  output=$("$@" 2>&1 || true)
+  if echo "$output" | grep -qF "$substring"; then
+    _pass "Output contains '${substring}'"
+  else
+    _fail "Output contains '${substring}' (not found in output)"
+  fi
+}
+
 # assert_git_config <key> <expected_value>
 # Passes if `git config --global <key>` returns <expected_value>.
 assert_git_config() {

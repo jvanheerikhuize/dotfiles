@@ -7,6 +7,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Bootstrap dependencies
 # install.sh pre-flight requires: git, python3
 # YAML parsing requires: python3-yaml
+# SSH key tests require: openssh-client (ssh-keygen); tests run with
+#   --dotfiles-only which skips apt installs, so it must be pre-installed here.
 # Passwordless sudo is required because install.sh rejects root but calls
 # sudo internally for apt-get, snap, etc.
 # ---------------------------------------------------------------------------
@@ -16,6 +18,7 @@ RUN apt-get update && \
         git \
         python3 \
         python3-yaml \
+        openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
