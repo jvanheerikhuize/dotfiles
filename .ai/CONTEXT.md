@@ -69,6 +69,7 @@
 - 2026-02-25: Repository initialized; FEAT-0001 through FEAT-0004 implemented
 - 2026-02-25: FEAT-0005 implemented: --dry-run flag; DRY_RUN variable gates all mutating operations in packages.sh and dotfiles.sh
 - 2026-02-25: FEAT-0006 implemented: --validate-only flag; validate_profiles() catches missing keys, bad extends, circular refs, non-list package values before any installs
+- 2026-02-26: FEAT-0007 implemented: run summary report; EXIT trap; QUIET flag; summary arrays populated by install/link functions
 - 2026-02-26: FEAT-0015 implemented: AI governance system adopted from upstream template — DIRECTIVES.md, persistent .ai/memory/ system, .ai/decisions/ ADR infrastructure, docs/runbooks/template-sync.md
 
 ### Known Issues

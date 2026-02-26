@@ -570,7 +570,70 @@ Validation error: circular extends detected: desktop → base → desktop
 
 ---
 
-## 17. Revision History
+## 17. Run Summary Pattern (FEAT-0007)
+
+install.sh accumulates summary data throughout the run using global arrays, then prints a structured summary at the end via an EXIT trap.
+
+**Global arrays** (declared in `install.sh`, referenced via `${VAR:-}` in sourced scripts):
+
+| Array | Populated by | Contains |
+|-------|-------------|---------|
+| `INSTALLED_PACKAGES[]` | `install_*_package()` | Packages installed (or would install in dry-run) |
+| `SKIPPED_PACKAGES[]` | `install_*_package()` | Packages already installed (idempotency skip) |
+| `LINKED_DOTFILES[]` | `link_dotfile()` | Dotfiles linked (or would link in dry-run) |
+| `SKIPPED_DOTFILES[]` | `link_dotfile()` | Dotfiles skipped (already linked or collision) |
+| `WARNINGS[]` | `install_deb_package()`, `link_dotfile()` | Warning messages for the summary |
+
+**Trap pattern:**
+```bash
+# In install.sh — set immediately after parse_args
+trap '_on_exit' EXIT
+
+_on_exit() {
+  local exit_code=$?
+  if [[ $exit_code -ne 0 ]]; then
+    RUN_FAILED=true
+  fi
+  print_summary
+}
+```
+
+**PROVISIONING_STARTED guard** — summary is only printed for provisioning runs (not `--help` or `--validate-only`):
+```bash
+# Set after the --validate-only check, before load_profile()
+PROVISIONING_STARTED=true
+```
+
+**Dry-run label swap** — summary uses "Would install" / "Would link" when `DRY_RUN=true`:
+```bash
+if [[ "$DRY_RUN" == "true" ]]; then
+  pkg_label="Would install"
+  dotfile_label="Would link"
+else
+  pkg_label="Installed"
+  dotfile_label="Linked"
+fi
+```
+
+**QUIET flag** — `--quiet` suppresses `log_info`, `log_step`, and `log_dry_run` per-step output, but `print_summary` always prints because it uses direct `echo` calls:
+```bash
+log_info() {
+  if [[ "${QUIET:-false}" != "true" ]]; then
+    echo -e "${_GREEN}[INFO]${_RESET}  $(date '+%H:%M:%S') $*"
+  fi
+}
+```
+
+**Rules:**
+- `INSTALLED_PACKAGES` and `SKIPPED_PACKAGES` are populated by every `install_*_package()` function in `src/packages.sh`
+- `LINKED_DOTFILES`, `SKIPPED_DOTFILES`, and `WARNINGS` are populated by `link_dotfile()` in `src/dotfiles.sh`
+- Summary arrays use `${ARRAY[@]+"${ARRAY[@]}"}` form for safe empty-array expansion under `set -u`
+- Elapsed time is measured with `$SECONDS` bash builtin — no overhead, available from script start
+- Warnings section is omitted entirely when `${#WARNINGS[@]} -eq 0`
+
+---
+
+## 18. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
