@@ -1,23 +1,30 @@
 # Project Context
 
-> **For AI Assistants**: This is the master context file. Start here for a complete understanding of the project.
+> **For AI Assistants**: Read [DIRECTIVES.md](DIRECTIVES.md) first (mandatory rules), then this file for project context.
 
 <!--
   AI PROCESSING INSTRUCTIONS:
-  1. Read this file first to understand project scope
-  2. Follow links to detailed documents as needed
-  3. Check config.yaml for behavior preferences
-  4. Respect patterns in architecture/PATTERNS.md
+  1. Read DIRECTIVES.md FIRST — mandatory rules that override all defaults
+  2. Read this file to understand project scope
+  3. Read memory/SESSION_LOG.md for most recent session state
+  4. Read memory/LEARNINGS.md for accumulated gotchas before touching code
+  5. Follow links to detailed documents as needed
+  6. Check config.yaml for behavior preferences
+  7. Respect patterns in architecture/PATTERNS.md
 -->
 
 ## Quick Reference
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
+| [DIRECTIVES.md](DIRECTIVES.md) | Mandatory AI rules | Every session, before anything else |
 | [SPEC.md](specs/SPEC.md) | Product requirements | Understanding WHAT to build |
 | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | System design | Understanding HOW it's built |
 | [PATTERNS.md](architecture/PATTERNS.md) | Code conventions | Writing or reviewing code |
-| [decisions/](decisions/) | ADRs | Understanding WHY decisions were made |
+| [decisions/INDEX.md](decisions/INDEX.md) | ADR index | Understanding WHY decisions were made |
+| [memory/SESSION_LOG.md](memory/SESSION_LOG.md) | Session history | Start of every session |
+| [memory/LEARNINGS.md](memory/LEARNINGS.md) | Gotchas and knowledge | Before touching existing code |
+| [memory/TRACEABILITY.md](memory/TRACEABILITY.md) | Request → PR audit trail | When checking if related work exists |
 
 ---
 
@@ -55,14 +62,15 @@
 - [x] FEAT-0004: Docker smoke test suite (tests/smoke/, .github/workflows/smoke-tests.yml)
 - [x] FEAT-0005: Dry-run mode (--dry-run flag in install.sh; DRY_RUN gates all mutations)
 - [x] FEAT-0006: Profile YAML validation (--validate-only flag; validate_profiles() in src/validate.sh)
-- [x] FEAT-0007: Run summary report (--quiet flag; EXIT trap; print_summary(); INSTALLED/SKIPPED/LINKED/WARNINGS arrays)
-- [ ] FEAT-0008 through FEAT-0014: Pending (see specs.config.yaml)
+- [x] FEAT-0015: AI governance system (DIRECTIVES.md, .ai/memory/, .ai/decisions/ ADR infra, template-sync runbook)
+- [ ] FEAT-0007 through FEAT-0014: Pending (see specs.config.yaml)
 
 ### Recent Changes
 - 2026-02-25: Repository initialized; FEAT-0001 through FEAT-0004 implemented
 - 2026-02-25: FEAT-0005 implemented: --dry-run flag; DRY_RUN variable gates all mutating operations in packages.sh and dotfiles.sh
 - 2026-02-25: FEAT-0006 implemented: --validate-only flag; validate_profiles() catches missing keys, bad extends, circular refs, non-list package values before any installs
 - 2026-02-26: FEAT-0007 implemented: run summary report; EXIT trap; QUIET flag; summary arrays populated by install/link functions
+- 2026-02-26: FEAT-0015 implemented: AI governance system adopted from upstream template — DIRECTIVES.md, persistent .ai/memory/ system, .ai/decisions/ ADR infrastructure, docs/runbooks/template-sync.md
 
 ### Known Issues
 - None
@@ -135,9 +143,16 @@ dotfiles/
 │       ├── run-tests.sh       # Main runner; builds image, runs scenarios
 │       ├── helpers.sh         # assert_* functions
 │       └── tests/             # One script per scenario
-└── .github/
-    └── workflows/
-        └── smoke-tests.yml    # Runs smoke tests on every PR
+├── .github/
+│   └── workflows/
+│       └── smoke-tests.yml    # Runs smoke tests on every PR
+├── .ai/
+│   ├── DIRECTIVES.md          # Mandatory AI rules (read first every session)
+│   ├── memory/                # Persistent AI memory (SESSION_LOG, LEARNINGS, TRACEABILITY, AUTHORIZATIONS)
+│   └── decisions/             # Architecture Decision Records (README, INDEX, template)
+└── docs/
+    └── runbooks/
+        └── template-sync.md   # How to pull future upstream template updates
 ```
 
 ### Module Map
