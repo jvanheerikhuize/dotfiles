@@ -150,7 +150,7 @@ specifications:
 
   - id: "FEAT-0009"
     file: "specs/features/FEAT-0009-ssh-key-setup.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "medium"
     assignee: "Jerry"

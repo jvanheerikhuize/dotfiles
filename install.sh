@@ -12,6 +12,7 @@ source "${SCRIPT_DIR}/src/validate.sh"
 source "${SCRIPT_DIR}/src/packages.sh"
 source "${SCRIPT_DIR}/src/dotfiles.sh"
 source "${SCRIPT_DIR}/src/setup-git-identity.sh"
+source "${SCRIPT_DIR}/src/setup-ssh.sh"
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -374,6 +375,7 @@ main() {
   if [[ "$SKIP_DOTFILES" != "true" ]]; then
     apply_dotfiles "$DOTFILES_DIR" "$HOME" "$FORCE"
     setup_git_identity
+    setup_ssh_key
   else
     log_info "Skipping dotfiles (--skip-dotfiles)"
   fi
