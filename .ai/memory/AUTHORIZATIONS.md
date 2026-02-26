@@ -71,21 +71,32 @@ These are the action types that always require a decision protocol check:
 
 ## Base Rules
 
+> **Instructions for project owners**: Fill in the sections below. These rules are absolute and cannot be overridden by learned authorizations or in-session user requests.
+
 ### Never Allowed
+<!-- Actions the AI must always refuse, regardless of user requests -->
+<!-- Format: - [category]: [description of what is banned] -->
+
 - `git-force`: Never force push to `main` or `master`
 - `test-bypass`: Never delete, skip, or suppress tests to make a build pass
 - `security-sensitive`: Never commit credentials, tokens, or secrets to any file
-- `git-commit`: Never commit directly to `main` — always use a feature branch
+- <!-- Add more never-allowed rules here -->
 
 ### Always Allowed (No Confirmation Needed)
+<!-- Actions the AI may take freely without asking -->
+<!-- Format: - [category]: [description of what is always permitted] -->
+
 - `delete-files`: Delete files inside `.ai/memory/` and `.ai/decisions/` (AI-maintained files)
-- `delete-files`: Delete `.ai/prompts/create-repository.md` (template meta-prompt, not project content)
-- `git-commit`: Commit on a feature branch (non-main) after implementing an approved spec
+- <!-- Add more always-allowed rules here -->
 
 ### Always Ask (Regardless of Learned Authorizations)
+<!-- Actions that must always be confirmed, even if a general learned authorization exists -->
+<!-- Format: - [category]: [description of when to always ask] -->
+
 - `git-push`: Always confirm before pushing to any remote
-- `git-force`: Always confirm before any force operation (even if not in Never Allowed above)
+- `git-force`: Always confirm before any force operation (applies even if not in Never Allowed above)
 - `external-call`: Always confirm before contacting external services
+- <!-- Add more always-ask rules here -->
 
 ---
 

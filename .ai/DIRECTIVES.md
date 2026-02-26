@@ -13,12 +13,17 @@
 
 ## 1. Core Directives
 
-1. **Read context first** — Before taking any action, read `.ai/CONTEXT.md` to confirm the current project state. Do not rely on memory alone.
-2. **Spec approval required** — Do not implement any feature unless its status is `approved` in `specs.config.yaml`. `draft` and `review` specs must not be implemented without explicit user instruction.
-3. **Update .ai docs before committing** — After implementing any spec, update `.ai/CONTEXT.md`, `.ai/architecture/ARCHITECTURE.md`, and `.ai/architecture/PATTERNS.md` to reflect the changes before creating the commit.
-4. **Idempotency is non-negotiable** — Every operation in `install.sh`, `src/packages.sh`, and `src/dotfiles.sh` must be safe to run twice on the same machine without side effects.
-5. **Fail loudly** — Always exit non-zero and print a clear error message on failure. Never silently swallow errors or skip steps without logging.
-6. **Minimal sudo** — Elevate only for the individual commands that require it (package installs). Never run the whole script as root.
+<!--
+  Add your mandatory directives here.
+  Format each directive as a numbered rule with a clear, imperative statement.
+
+  Example:
+  1. **Never expose secrets** - Do not log, print, or include secrets, tokens, or credentials anywhere in generated code or output.
+  2. **Require spec approval** - Do not implement new features unless the spec status is `approved` in specs.config.yaml.
+-->
+
+1. <!-- Directive: [Short Title] --> [Full directive text here]
+2. <!-- Directive: [Short Title] --> [Full directive text here]
 
 ---
 
@@ -26,13 +31,17 @@
 
 Actions that must **never** be taken, under any circumstances:
 
-- Do NOT commit directly to `main` or `master` — all changes go through a feature branch and PR.
-- Do NOT place implementation code in `scripts/` — that directory contains template tooling only (spec ingestion scripts). All provisioning code goes in `src/` or `install.sh`.
-- Do NOT hardcode package lists in shell scripts — package lists always live in `profiles/*.yaml`.
-- Do NOT commit credentials, tokens, API keys, or passwords anywhere in the repository.
-- Do NOT add `curl | bash` or any un-checksummed script execution to profiles or source files.
-- Do NOT modify system-level config files (`/etc/fstab`, `/etc/sudoers`, etc.) — scope is `$HOME` only.
-- Do NOT use `--no-verify` to bypass git hooks, or delete/suppress tests to make a build pass.
+<!--
+  List actions that are absolutely off-limits.
+
+  Example:
+  - Do NOT commit directly to `main` or `master`
+  - Do NOT remove or bypass tests to make a build pass
+  - Do NOT hardcode environment-specific values (URLs, IPs, credentials)
+-->
+
+- Do NOT place implementation code in `scripts/` — that directory contains template repo tooling only (spec ingestion scripts). All AI-generated application code must go in `src/`.
+- [ ] [Forbidden action 2]
 
 ---
 
@@ -40,11 +49,18 @@ Actions that must **never** be taken, under any circumstances:
 
 Before making **any** change, verify all of the following:
 
-- [ ] Read `.ai/CONTEXT.md` to confirm current project state and which specs are in progress.
-- [ ] Check `.ai/decisions/INDEX.md` to understand past decisions before acting.
-- [ ] Confirm the relevant spec is `approved` in `specs.config.yaml` (or user has explicitly instructed implementation of a draft).
-- [ ] Read `.ai/architecture/PATTERNS.md` before generating any bash code.
-- [ ] Check `.ai/memory/LEARNINGS.md` for known gotchas before touching existing code.
+<!--
+  Checklist the AI must mentally run through before proceeding.
+
+  Example:
+  - [ ] Read .ai/CONTEXT.md to confirm current project state
+  - [ ] Confirm the relevant spec is `approved` in specs.config.yaml
+  - [ ] Verify no existing test will break
+-->
+
+- [ ] Read `.ai/CONTEXT.md` to confirm current project state
+- [ ] Check `.ai/decisions/INDEX.md` to understand past decisions before acting
+- [ ] [Pre-action check 3]
 
 ---
 
@@ -125,36 +141,56 @@ See [AUTHORIZATIONS.md](.ai/memory/AUTHORIZATIONS.md) for the full decision tree
 
 When directives, user instructions, or constraints conflict, resolve them in this order:
 
-1. **Security** — Never compromise security (no secrets, no unsafe evals, no bypassed auth) for any other goal.
-2. **Correctness** — Code must be correct and idempotent before it is clean or fast.
-3. **Spec compliance** — Match the spec exactly; implement all acceptance criteria and nothing beyond.
-4. **Existing patterns** — Follow `.ai/architecture/PATTERNS.md`; match the style of surrounding code.
-5. **Simplicity** — Prefer the simpler solution when multiple correct approaches exist.
+<!--
+  Define what wins when rules collide.
+
+  Example:
+  1. Security — Never compromise security for any other goal
+  2. Correctness — Code must be correct before it is clean
+  3. Spec compliance — Match the spec exactly; no extras
+  4. Performance — Optimize only when measurably necessary
+  5. Readability — Prefer clear code as a tiebreaker
+-->
+
+1. [Highest priority]
+2. [Second priority]
+3. [Third priority]
 
 ---
 
 ## 5. Communication Rules
 
-- Always cite the file and line number (or section) when referencing existing code or docs.
-- Flag ambiguities or conflicts in a spec **before** implementing, not after.
-- When a task is blocked (failing test, missing file, unclear requirement), stop and ask — do not brute-force past it.
-- At the end of every implementation session, summarise: files changed, acceptance criteria covered, any open items.
-- If a user instruction contradicts a directive in this file, name the conflict explicitly before proceeding.
+How the AI must communicate with the team:
+
+<!--
+  Define expected communication behaviors.
+
+  Example:
+  - Always cite the file and line number when referencing code
+  - Flag ambiguities in specs before implementing, not after
+  - Summarize every change set at the end of a session
+-->
+
+- [Communication rule 1]
+- [Communication rule 2]
 
 ---
 
 ## 6. Domain-Specific Rules
 
-Rules that apply specifically to this project's bash provisioning stack:
+Rules that apply specifically to this project's domain or stack:
 
-- **Bash only** — All provisioning logic is bash. No Python, Ruby, or Node scripts in `src/` or `install.sh`.
-- **`set -euo pipefail`** — Every script must have this at the top. No exceptions.
-- **`[[ cond ]] && cmd` is banned under `set -e`** — Use `if [[ cond ]]; then cmd; fi` instead. `[[ false ]] && cmd` returns exit code 1 and triggers `errexit`.
-- **`return 0` not bare `return` in dotfiles** — Non-interactive guards in `.bashrc` etc. must use `return 0`; a bare `return` inherits the exit code of the failed `[[ ]]` test, which propagates through `.bash_profile` and breaks `bash --login`.
-- **`--force` in symlink smoke tests** — Smoke tests that exercise dotfile linking must pass `--force` because Ubuntu's `useradd -m` pre-creates `/etc/skel` copies of `.bashrc` etc. in `$HOME`.
-- **YAML for all config** — Package lists and profile definitions always go in `profiles/*.yaml`. Never hardcode them in shell.
-- **python3 for YAML parsing** — Use inline python3 heredocs (python3 is present on Ubuntu 22.04 by default). No external YAML tools.
-- **Dry-run gating** — All mutating operations (package installs, symlink creation, file moves) must check `${DRY_RUN:-false}` and use `log_dry_run` instead of executing when true.
+<!--
+  Add rules unique to your domain, tech stack, or business context.
+
+  Example:
+  - All monetary values must use integer cents, never floats
+  - All timestamps must be stored and transmitted as UTC ISO-8601
+  - PII fields must be marked and never logged
+-->
+
+- [Domain rule 1]
+- [Domain rule 2]
 
 ---
 
@@ -163,6 +199,6 @@ Rules that apply specifically to this project's bash provisioning stack:
 | Field | Value |
 |-------|-------|
 | Version | 1.0 |
-| Last Updated | 2026-02-26 |
-| Owner | Jerry |
+| Last Updated | YYYY-MM-DD |
+| Owner | [Team/Person] |
 | Review Frequency | On every major project change |

@@ -7,6 +7,7 @@ This directory contains structured documentation optimized for AI assistants (Cl
 ```
 .ai/
 ├── README.md              # This file
+├── DIRECTIVES.md          # Mandatory AI rules (read before everything)
 ├── CONTEXT.md             # Master context file (start here)
 ├── config.yaml            # AI behavior configuration
 │
@@ -20,10 +21,15 @@ This directory contains structured documentation optimized for AI assistants (Cl
 │   └── diagrams/         # Architecture diagrams (Mermaid, etc.)
 │
 ├── decisions/            # Architecture Decision Records (ADRs)
+│   ├── README.md         # ADR process guide
+│   ├── INDEX.md          # Living index of all ADRs
 │   └── template.md       # ADR template
 │
-└── prompts/              # Reusable prompt templates
-    └── templates/        # Common prompt patterns
+├── memory/               # AI persistent memory
+│   ├── README.md         # How the memory system works
+│   ├── SESSION_LOG.md    # Chronological session log
+│   ├── LEARNINGS.md      # Accumulated project knowledge
+│   └── TRACEABILITY.md   # End-to-end traceability matrix
 ```
 
 ## How AI Tools Use This

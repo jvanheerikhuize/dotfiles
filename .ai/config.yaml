@@ -26,12 +26,17 @@ project:
 context:
   # Files AI should read first for context
   entry_points:
+    - ".ai/DIRECTIVES.md"  # Non-negotiable rules — read first
     - ".ai/CONTEXT.md"  # Always start here
     - ".ai/specs/SPEC.md"
     - ".ai/architecture/ARCHITECTURE.md"
 
   # Additional context files to include
   include:
+    - ".ai/memory/AUTHORIZATIONS.md" # Read before every gated action
+    - ".ai/memory/SESSION_LOG.md"   # Read at session start for continuity
+    - ".ai/memory/LEARNINGS.md"     # Read at session start for project knowledge
+    - ".ai/memory/TRACEABILITY.md"  # Read when starting implementation work
     - ".ai/architecture/PATTERNS.md"
     - "specs.config.yaml"
     - "package.json"  # or equivalent for your language

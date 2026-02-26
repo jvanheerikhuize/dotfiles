@@ -26,7 +26,7 @@ You do **not** need an ADR for:
 
 ## How to Create an ADR
 
-1. Copy `template.md` and name it `ADR-NNN-short-title.md` (e.g., `ADR-002-use-python3-yaml.md`)
+1. Copy `template.md` and name it `ADR-NNN-short-title.md` (e.g., `ADR-002-use-postgres.md`)
 2. Use the next sequential number from [INDEX.md](INDEX.md)
 3. Fill in all sections — leave none blank
 4. Set status to `Proposed` initially; update to `Accepted` once the decision is confirmed
@@ -38,9 +38,9 @@ You do **not** need an ADR for:
 ADR-NNN-kebab-case-title.md
 
 Examples:
-  ADR-001-bash-only-provisioning-language.md
-  ADR-002-python3-for-yaml-parsing.md
-  ADR-003-additive-only-profile-inheritance.md
+  ADR-001-add-ai-directives-system.md
+  ADR-002-use-postgres-over-mysql.md
+  ADR-003-deprecate-rest-in-favour-of-graphql.md
 ```
 
 ---

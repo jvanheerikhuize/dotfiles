@@ -1,79 +1,67 @@
 # AI Coding Assistant Instructions
 
 > This document provides context and guidelines for AI coding assistants when working with this repository.
+> Works with: Claude Code, GitHub Copilot, Cursor, Aider, Cody, Continue, and other AI tools.
 
 ## Quick Start
 
 **Before doing anything, read these files for context:**
-1. `.ai/DIRECTIVES.md` - Mandatory rules (read first — these override all defaults)
+1. `.ai/DIRECTIVES.md` - Mandatory rules you must always comply with
 2. `.ai/CONTEXT.md` - Project overview and current state
 3. `.ai/architecture/PATTERNS.md` - Code patterns to follow
 4. `.ai/config.yaml` - AI behavior preferences
 
-**At the start of every session, also read:**
-- `.ai/memory/SESSION_LOG.md` - Most recent entry for open items and recent state
-- `.ai/memory/LEARNINGS.md` - Accumulated gotchas and project knowledge
-- `.ai/memory/TRACEABILITY.md` - Check if related work exists before starting
-
 ## Project Overview
 
-This is a **bash provisioning system** for Ubuntu 22.04 that installs packages and applies dotfiles via symlinks. It is the **Stage 2** of a two-stage Ubuntu setup:
-- Stage 1: Unattended OS install via `Autoinstall.yaml`
-- Stage 2: This repo — tools, packages, and dotfiles applied by `./install.sh`
-
-Features are implemented based on formal specifications in `specs/features/`. All changes require an approved spec before implementation.
+This is a **language-agnostic, platform-agnostic template repository** designed for **spec-based development** with AI assistant integration. Features are implemented based on formal specifications rather than ad-hoc requests.
 
 ### Key Principles
-- **Spec-Driven**: All features start with a formal YAML spec — no ad-hoc additions
-- **Idempotent**: Every operation is safe to run twice on the same machine
-- **Bash-only**: No Python, Node, or Ruby for provisioning code — bash + python3 for YAML parsing only
-- **Fail loudly**: Non-zero exits with clear errors; never silently skip failures
-- **Minimal sudo**: Elevated only for individual package install commands
+- **AI-Agnostic**: Works with any AI coding assistant
+- **Platform-Agnostic**: Supports Windows, macOS, and Linux
+- **Language-Agnostic**: Adaptable to any programming language
+- **Spec-Driven**: Formal specifications before implementation
 
 ## Repository Structure
 
 ```
-├── install.sh                  # Main entrypoint (arg parsing, orchestration)
-├── profiles/                   # Declarative package manifests (YAML)
-│   ├── base.yaml              # Core CLI tools (always applied)
-│   ├── desktop.yaml           # GUI apps (extends base)
-│   ├── server.yaml            # Headless tooling (extends base)
-│   └── dev.yaml               # Full dev environment (extends desktop)
-├── dotfiles/                   # Config files symlinked into $HOME
-│   ├── .bashrc
-│   ├── .bash_aliases
-│   ├── .bash_profile
-│   └── .gitconfig
-├── src/                        # Provisioning helpers
-│   ├── utils.sh               # Logging, guards, YAML helpers
-│   ├── validate.sh            # Profile YAML validation (FEAT-0006)
-│   ├── packages.sh            # apt/snap/flatpak/deb/custom installers
-│   └── dotfiles.sh            # Symlink management
-├── tests/
-│   └── smoke/                 # Docker-based smoke tests (FEAT-0004)
-│       ├── Dockerfile
-│       ├── run-tests.sh
-│       ├── helpers.sh
-│       └── tests/
-├── specs/                      # Implementation specifications
-│   ├── features/              # Feature specs (YAML, FEAT-XXXX-*.yaml)
-│   └── schemas/               # JSON schemas for spec validation
-├── scripts/                    # Template tooling only (spec ingestion)
+├── .ai/                      # AI context and documentation
+│   ├── CONTEXT.md           # Master context file (START HERE)
+│   ├── config.yaml          # AI behavior configuration
+│   ├── specs/               # Product specifications
+│   │   └── SPEC.md         # Product specification template
+│   ├── architecture/        # Technical documentation
+│   │   ├── ARCHITECTURE.md # System architecture
+│   │   └── PATTERNS.md     # Code patterns and conventions
+│   ├── decisions/           # Architecture Decision Records
+│   │   ├── README.md       # ADR process guide
+│   │   ├── INDEX.md        # Living index of all ADRs
+│   │   ├── template.md     # Blank ADR template
+│   │   └── ADR-NNN-*.md   # Individual decision records
+│   └── memory/              # AI persistent memory (SESSION_LOG, LEARNINGS, TRACEABILITY)
+│
+├── specs/                    # Implementation specifications
+│   ├── features/            # Feature specs (YAML)
+│   ├── api/                 # API specs (OpenAPI)
+│   └── schemas/             # JSON schemas for validation
+│
+├── scripts/                  # TEMPLATE REPO SCRIPTS ONLY — do not put implementation code here
+│   ├── ingest-spec.sh       # Spec ingestion helper (Bash/Unix)
+│   └── Invoke-SpecIngestion.ps1  # Spec ingestion helper (PowerShell)
+│                             # All AI-generated application code goes in src/ instead
+│
+├── src/                      # All implementation code lives here (create if absent)
+│
 ├── .github/
-│   └── workflows/
-│       └── smoke-tests.yml    # CI: runs smoke tests on every PR
-├── .ai/                        # AI context and documentation
-│   ├── DIRECTIVES.md          # Mandatory AI rules (read first)
-│   ├── CONTEXT.md             # Master context
-│   ├── config.yaml            # AI behavior configuration
-│   ├── architecture/          # ARCHITECTURE.md, PATTERNS.md
-│   ├── decisions/             # ADRs (README, INDEX, template)
-│   ├── memory/                # SESSION_LOG, LEARNINGS, TRACEABILITY, AUTHORIZATIONS
-│   └── specs/                 # SPEC.md (product spec)
+│   └── ISSUE_TEMPLATE/      # Issue templates
+│
 ├── docs/
-│   └── runbooks/              # Operational runbooks
-│       └── template-sync.md   # How to sync future template updates
-└── specs.config.yaml          # Central spec registry
+│   ├── spec-based-development.md
+│   ├── integrations.md
+│   └── runbooks/            # Operational procedures
+│
+├── specs.config.yaml        # Central spec registry & config
+├── .claude/                 # Claude Code configuration
+└── .cursorrules             # Cursor IDE rules (optional)
 ```
 
 ## Context Hierarchy
@@ -82,94 +70,113 @@ When you need information, follow this hierarchy:
 
 | Question | Where to Look |
 |----------|---------------|
-| What rules must I follow? | `.ai/DIRECTIVES.md` |
 | What does this project do? | `.ai/CONTEXT.md` → `.ai/specs/SPEC.md` |
 | How is it built? | `.ai/architecture/ARCHITECTURE.md` |
 | What patterns should I follow? | `.ai/architecture/PATTERNS.md` |
-| Why was X decided? | `.ai/decisions/INDEX.md` → `ADR-NNN-*.md` |
-| What have I learned before? | `.ai/memory/LEARNINGS.md` |
-| What work has been done? | `.ai/memory/TRACEABILITY.md` |
+| Why was X decided? | `.ai/decisions/` |
 | What feature should I implement? | `specs/features/*.yaml` |
+| What's the API contract? | `specs/api/*.yaml` |
 | What's pending/approved? | `specs.config.yaml` |
 
 ## Spec-Based Development Workflow
 
 1. **Specification First**: All features start with a formal spec in `specs/features/`
-2. **Review & Approval**: Specs go through review before implementation (status: `approved`)
-3. **Branch**: Create a feature branch `FEAT-XXXX-short-title`
-4. **Implement**: Follow patterns, implement all acceptance criteria, update `.ai` docs
-5. **PR**: Create a PR for human review
+2. **Review & Approval**: Specs go through review before implementation
+3. **AI-Assisted Implementation**: Approved specs trigger AI implementation
+4. **PR Creation**: Implementation creates a PR for human review
 
 ## When Implementing Specs
 
 ### DO:
-- Read `.ai/DIRECTIVES.md` and `.ai/CONTEXT.md` first
-- Read the full spec before writing a single line of code
+- Read `.ai/CONTEXT.md` first for project context
+- Read and understand the entire spec before coding
 - Follow patterns in `.ai/architecture/PATTERNS.md`
 - Implement ALL acceptance criteria
-- Update `.ai/CONTEXT.md`, `ARCHITECTURE.md`, and `PATTERNS.md` before committing
-- Update spec status to `implemented` in both the YAML and `specs.config.yaml`
+- Create appropriate tests for each acceptance criterion
+- Keep implementations minimal and focused on the spec
+- Document any decisions made when spec is ambiguous
+- **Create an ADR** in `.ai/decisions/` for every architectural, hard-to-reverse, or non-obvious decision — see `.ai/decisions/README.md` for trigger conditions and `.ai/decisions/INDEX.md` for the next number
 
 ### DON'T:
 - Add features not in the spec
-- Hardcode package lists in shell scripts — use `profiles/*.yaml`
-- Commit directly to `main` — always use a feature branch
-- Skip or suppress tests
-- Place provisioning code in `scripts/` (template tooling only)
+- Over-engineer solutions
+- Skip acceptance criteria
+- Ignore existing code patterns
+- Make breaking changes without spec approval
+- Modify security-related code without explicit request
 
-## Spec File Format
+## Spec File Formats
 
-### Feature Specs (`specs/features/FEAT-XXXX-*.yaml`)
+### Feature Specs (`specs/features/*.yaml`)
 - Follow the schema in `specs/schemas/feature-spec.schema.json`
-- Must include: `metadata`, `description`, `acceptance_criteria`
+- Must include: metadata, description, acceptance_criteria
 - Use Gherkin-style (Given/When/Then) for acceptance criteria
-- Status flow: `draft` → `review` → `approved` → `implemented`
+
+### API Specs (`specs/api/*.yaml`)
+- Follow OpenAPI 3.1 specification
+- Include complete request/response schemas
+- Document error responses
 
 ## Code Conventions
 
-Read `.ai/architecture/PATTERNS.md` for full details. Key principles:
+Read `.ai/architecture/PATTERNS.md` for detailed patterns. Key principles:
 
-1. `#!/usr/bin/env bash` + `set -euo pipefail` in every script
-2. All output via `log_info` / `log_warn` / `log_error` / `log_dry_run` from `src/utils.sh`
-3. Named functions with `local` variables — no inline logic, no global side effects
-4. Check state before acting — every operation must be idempotent
-5. `if [[ cond ]]; then cmd; fi` — never `[[ cond ]] && cmd` under `set -e`
+1. **Match existing style** - If code exists, match its patterns
+2. **Standard tooling** - Use language-standard formatters/linters
+3. **Clear naming** - Self-documenting names over comments
+4. **Test coverage** - Tests for all acceptance criteria
+5. **Minimal changes** - Only change what the spec requires
 
 ## Testing Requirements
 
 For each acceptance criterion in a spec:
-1. Create a smoke test in `tests/smoke/tests/`
-2. Register the scenario in `tests/smoke/run-tests.sh`
-3. Cover: happy path, error cases, and idempotency (second run safe)
+1. Create at least one test case
+2. Cover the happy path (Given/When/Then)
+3. Cover edge cases if specified
+4. Cover error cases if specified
 
 ## Commit Messages
 
 Follow conventional commits format:
 ```
-feat(FEAT-XXXX): Brief description
+feat(FEAT-0001): Brief description
 
-- Implemented AC-001, AC-002, AC-003
-- Added smoke tests for all criteria
+- Implemented acceptance criteria AC-001, AC-002
+- Added tests for all criteria
 
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+Co-Authored-By: [AI Assistant Name] <noreply@example.com>
 ```
 
 ## Working with specs.config.yaml
 
 The central configuration tracks all specs:
-- Only implement specs with `status: approved`
-- Update `status` to `implemented` after completion
-- Check `priority` to determine implementation order
+- Check `specifications` array for pending work
+- Respect `status` field (only implement `approved` specs)
+- Update status to `implemented` after completion
 
 ## Important Files to Read
 
 Before implementing any spec, read:
-1. `.ai/DIRECTIVES.md` - Mandatory rules
-2. `.ai/CONTEXT.md` - Current project state
-3. `.ai/memory/SESSION_LOG.md` - Most recent session for open items
-4. `.ai/memory/LEARNINGS.md` - Known gotchas
-5. `.ai/architecture/PATTERNS.md` - Code patterns
-6. The spec file itself (thoroughly)
-7. `specs.config.yaml` for context
-8. Related existing code
-9. Existing tests for patterns
+1. `.ai/CONTEXT.md` - Current project state
+2. `.ai/architecture/PATTERNS.md` - Code patterns
+3. The spec file itself (thoroughly)
+4. `specs.config.yaml` for context
+5. Related existing code
+6. Existing tests for patterns
+
+## AI Configuration
+
+Check `.ai/config.yaml` for:
+- Code generation preferences
+- Testing requirements
+- Behavior settings
+- Domain-specific terminology
+- AI tool integration settings
+
+## Cross-Platform Considerations
+
+When generating code or commands:
+- Provide both Bash and PowerShell alternatives where applicable
+- Use cross-platform path separators or abstract them
+- Consider Windows, macOS, and Linux compatibility
+- Reference appropriate scripts based on platform context

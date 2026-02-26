@@ -25,91 +25,46 @@ Append under the relevant category. Format:
 
 ## Codebase Gotchas
 
-### `[[ cond ]] && cmd` triggers errexit under `set -e`
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `src/packages.sh`, `src/dotfiles.sh`, `install.sh`
+<!-- Things that are easy to get wrong in this specific codebase -->
 
-Under `set -euo pipefail`, the expression `[[ false ]] && cmd` returns exit code 1 (from the failed `[[` test), which triggers `errexit` and kills the script. Always use `if [[ cond ]]; then cmd; fi` instead. This bit us in early implementations of the dry-run and dotfile linking logic.
-
-### `return 0` not bare `return` in dotfile non-interactive guards
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `dotfiles/.bashrc`, `dotfiles/.bash_profile`
-
-Dotfiles like `.bashrc` use a non-interactive guard at the top:
-```bash
-[[ $- == *i* ]] || return 0   # CORRECT
-[[ $- == *i* ]] || return     # WRONG
-```
-A bare `return` inherits the exit code of the failed `[[ $- == *i* ]]` test (exit code 1). When `.bash_profile` sources `.bashrc`, that exit code 1 propagates out and causes `bash --login -c exit` to exit non-zero, breaking the smoke test `test-base-bash-login.sh`.
-
-### Smoke tests that link dotfiles must use `--force`
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `tests/smoke/tests/test-base-dotfiles.sh`, `tests/smoke/Dockerfile`
-
-Ubuntu's `useradd -m` copies `/etc/skel` files (`.bashrc`, `.bash_profile`, `.profile`) into the new user's `$HOME` before provisioning runs. Without `--force`, `install.sh` sees these pre-existing regular files and skips symlinking (warns instead). Smoke tests must pass `--force` to replace them. This affects any test that asserts symlinks are created.
-
-### git `[include]` and `git config --global` write both silently fail when `~/.gitconfig` is a symlink into another git repo (git 2.34, Ubuntu 22.04)
-**Discovered**: 2026-02-26 | **Session**: 003 | **Relevant files**: `src/setup-git-identity.sh`, `dotfiles/.gitconfig`
-
-When `~/.gitconfig` is a symlink pointing to a file **inside another git repository** (e.g. `dotfiles/dotfiles/.gitconfig`), Ubuntu 22.04's git 2.34.1 (with CVE-2022-24765 security patches backported) exhibits **two silent failures**, both exit 0:
-1. `git config --global user.name` reads direct settings (e.g. `core.editor = vim`) correctly, but **does NOT follow `[include]` directives** from the symlink target.
-2. `git config --global include.path VALUE` (write) silently does nothing — it does **not** replace the symlink with a real file as expected on vanilla Linux.
-
-**Fix**: Bypass `git config --global` entirely. Use direct shell I/O to create a real `~/.gitconfig`:
-```bash
-src=$(readlink -f "${HOME}/.gitconfig")
-{ cat "$src"; printf '\n[include]\n\tpath = %s\n' "${GITCONFIG_LOCAL}"; } > "$tmp"
-mv "$tmp" "${HOME}/.gitconfig"
-```
-This copies the base settings verbatim, appends an `[include]` with the **absolute path** (no `~`), and replaces the symlink with a real file via `mv`. A real `~/.gitconfig` not inside a git repo is processed normally — `[include]` works. See `_register_gitconfig_include()` in `src/setup-git-identity.sh`.
+*No entries yet. Add the first one when you discover something non-obvious.*
 
 ---
 
 ## Patterns and Conventions
 
-### python3 heredoc for YAML parsing
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `src/validate.sh`, `install.sh`
+<!-- Patterns in use that diverge from common defaults, or that are project-specific -->
 
-All YAML parsing uses `python3 - <<'PYEOF' ... PYEOF` inline heredocs rather than a separate `.py` file. python3 is guaranteed present on Ubuntu 22.04. The heredoc receives arguments via `sys.argv` (e.g. profiles directory, profile name). This keeps the codebase purely bash + python3 with zero installed dependencies.
-
-### Validation runs before profile loading
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `install.sh`, `src/validate.sh`
-
-`validate_profiles()` is called before `load_profile()` in `main()`. This is intentional: `validate_profiles()` walks the extends chain structurally (checking keys, list types, circular refs) while `load_profile()` does the actual merge. Running validation first ensures a structurally invalid profile never triggers partial provisioning.
+*No entries yet.*
 
 ---
 
 ## Domain Knowledge
 
-### Profile inheritance is additive only
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `profiles/`, `install.sh`
+<!-- Business rules, domain terms, or constraints that are not obvious from reading code -->
 
-The `extends:` key merges parent package lists before child lists (base-first). Packages are deduplicated within each type. There is no way to remove a package from a parent via inheritance — child profiles can only add, never subtract.
-
-### Package install order is fixed
-**Discovered**: 2026-02-25 | **Session**: 001 | **Relevant files**: `src/packages.sh`
-
-Within a provisioning run, types are always installed in this order: apt → snap → flatpak → deb → custom. This is intentional because apt is the most common and may be required by others (e.g. flatpak itself is apt-installed if missing).
+*No entries yet.*
 
 ---
 
 ## Anti-Patterns (Do Not Repeat)
 
-### Hardcoding package names in shell scripts
-Any package that belongs in a profile must go in `profiles/*.yaml`, not in `install.sh` or `src/packages.sh`. The entire point of the YAML manifest is to separate policy (what to install) from mechanism (how to install).
+<!-- Things that were tried and failed, or explicitly rejected — with reasons -->
 
-### Running `sudo apt-get update` unconditionally
-The `sudo apt-get update -qq` in `install_apt_packages()` is gated on `${DRY_RUN:-false}`. It should not be run in dry-run mode, and ideally only once per run — not once per package.
+*No entries yet.*
 
 ---
 
 ## Integration and Environment Notes
 
-### Ubuntu 22.04 skel files
-`/etc/skel` on Ubuntu 22.04 contains `.bashrc`, `.bash_profile`, and `.profile`. Any smoke test running as a fresh user will have these files as regular files in `$HOME` before `install.sh` runs. See the `--force` gotcha above.
+<!-- Quirks about CI/CD, tooling, environment setup, or external dependencies -->
 
-### Docker smoke test isolation
-Each smoke test scenario runs in a fresh `docker run --rm` container from the same image. The image is built once per `run-tests.sh` invocation. `--no-cache` is used by default; pass `--use-cache` during development to speed up iterative testing.
+*No entries yet.*
 
 ---
 
 ## Security Notes
 
-*No security issues found to date. All secrets handling is explicitly out-of-scope for this repo.*
+<!-- Security-relevant constraints or past issues — treat with care -->
+
+*No entries yet.*

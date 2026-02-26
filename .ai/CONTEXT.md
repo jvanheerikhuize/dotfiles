@@ -1,114 +1,90 @@
 # Project Context
 
-> **For AI Assistants**: Read [DIRECTIVES.md](DIRECTIVES.md) first (mandatory rules), then this file for project context.
+> **For AI Assistants**: This is the master context file. Start here for a complete understanding of the project.
 
 <!--
   AI PROCESSING INSTRUCTIONS:
-  1. Read DIRECTIVES.md FIRST — mandatory rules that override all defaults
-  2. Read this file to understand project scope
-  3. Read memory/SESSION_LOG.md for most recent session state
-  4. Read memory/LEARNINGS.md for accumulated gotchas before touching code
-  5. Follow links to detailed documents as needed
-  6. Check config.yaml for behavior preferences
-  7. Respect patterns in architecture/PATTERNS.md
+  1. Read this file first to understand project scope
+  2. Follow links to detailed documents as needed
+  3. Check config.yaml for behavior preferences
+  4. Respect patterns in architecture/PATTERNS.md
 -->
 
 ## Quick Reference
 
 | Document | Purpose | When to Read |
 |----------|---------|--------------|
-| [DIRECTIVES.md](DIRECTIVES.md) | Mandatory AI rules | Every session, before anything else |
+| [DIRECTIVES.md](DIRECTIVES.md) | Mandatory AI rules | **Always — before anything else** |
+| [memory/AUTHORIZATIONS.md](memory/AUTHORIZATIONS.md) | What the AI is/isn't allowed to do | Before any gated action |
+| [memory/SESSION_LOG.md](memory/SESSION_LOG.md) | Session history | Start of every session |
+| [memory/LEARNINGS.md](memory/LEARNINGS.md) | Accumulated project knowledge | Before touching existing code |
+| [memory/TRACEABILITY.md](memory/TRACEABILITY.md) | Request → code audit trail | When implementing or investigating |
 | [SPEC.md](specs/SPEC.md) | Product requirements | Understanding WHAT to build |
 | [ARCHITECTURE.md](architecture/ARCHITECTURE.md) | System design | Understanding HOW it's built |
 | [PATTERNS.md](architecture/PATTERNS.md) | Code conventions | Writing or reviewing code |
-| [decisions/INDEX.md](decisions/INDEX.md) | ADR index | Understanding WHY decisions were made |
-| [memory/SESSION_LOG.md](memory/SESSION_LOG.md) | Session history | Start of every session |
-| [memory/LEARNINGS.md](memory/LEARNINGS.md) | Gotchas and knowledge | Before touching existing code |
-| [memory/TRACEABILITY.md](memory/TRACEABILITY.md) | Request → PR audit trail | When checking if related work exists |
+| [decisions/](decisions/) | ADRs | Understanding WHY decisions were made |
 
 ---
 
 ## 1. Project Summary
 
+<!-- Fill this section with your project's key information -->
+
 ### Identity
-- **Name**: dotfiles
-- **Type**: CLI / Provisioning Scripts
-- **Stage**: Greenfield
+- **Name**: [Project Name]
+- **Type**: [Web App | API | Library | CLI | etc.]
+- **Stage**: [Greenfield | MVP | Growth | Mature]
 
 ### One-Liner
-> Stage 2 Ubuntu provisioning system that installs packages (apt, snap, flatpak, deb, custom) and applies dotfiles via symlinks, driven by a declarative YAML manifest with support for role-based profiles.
+> [One sentence describing what this project does and for whom]
 
 ### Tech Stack
 | Layer | Technology |
 |-------|------------|
-| Language | Bash |
-| Config | YAML |
-| Package managers | apt, snap, flatpak, direct .deb, custom scripts |
-| Dotfile strategy | Symlinks into $HOME |
-| Platform | Ubuntu (Linux) |
-
-### Provisioning Framework Context
-- **Stage 1**: Unattended Ubuntu base install via `Autoinstall.yaml` — installs OS, sets up users/partitions
-- **Stage 2** (this repo): Post-boot provisioning — installs tools, applies configs, links dotfiles
+| Language | [TypeScript, Python, Go, etc.] |
+| Framework | [Next.js, FastAPI, etc.] |
+| Database | [PostgreSQL, MongoDB, etc.] |
+| Infrastructure | [AWS, GCP, Vercel, etc.] |
 
 ---
 
 ## 2. Current State
 
 ### Active Work
-- [x] FEAT-0001: Core provisioning engine (install.sh + YAML manifest + apt + profile system)
-- [x] FEAT-0002: Multi-type package support (snap, flatpak, deb, custom)
-- [x] FEAT-0003: Base shell dotfiles (.bashrc, .bash_aliases, .bash_profile, .gitconfig)
-- [x] FEAT-0004: Docker smoke test suite (tests/smoke/, .github/workflows/smoke-tests.yml)
-- [x] FEAT-0005: Dry-run mode (--dry-run flag in install.sh; DRY_RUN gates all mutations)
-- [x] FEAT-0006: Profile YAML validation (--validate-only flag; validate_profiles() in src/validate.sh)
-- [x] FEAT-0007: Run summary report (--quiet flag; EXIT trap; print_summary(); INSTALLED/SKIPPED/LINKED/WARNINGS arrays)
-- [x] FEAT-0015: AI governance system (DIRECTIVES.md, .ai/memory/, .ai/decisions/ ADR infra, template-sync runbook)
-- [x] FEAT-0008: Git identity bootstrap (--non-interactive; src/setup-git-identity.sh; ~/.gitconfig.local; [include] in .gitconfig)
-- [ ] FEAT-0009 through FEAT-0014: Pending (see specs.config.yaml)
+<!-- What's being worked on right now? -->
+- [ ] [Current feature/task 1]
+- [ ] [Current feature/task 2]
 
 ### Recent Changes
-- 2026-02-25: Repository initialized; FEAT-0001 through FEAT-0004 implemented
-- 2026-02-25: FEAT-0005 implemented: --dry-run flag; DRY_RUN variable gates all mutating operations in packages.sh and dotfiles.sh
-- 2026-02-25: FEAT-0006 implemented: --validate-only flag; validate_profiles() catches missing keys, bad extends, circular refs, non-list package values before any installs
-- 2026-02-26: FEAT-0007 implemented: run summary report; EXIT trap; QUIET flag; summary arrays populated by install/link functions
-- 2026-02-26: FEAT-0015 implemented: AI governance system adopted from upstream template — DIRECTIVES.md, persistent .ai/memory/ system, .ai/decisions/ ADR infrastructure, docs/runbooks/template-sync.md
-- 2026-02-26: FEAT-0008 implemented: git identity bootstrap — src/setup-git-identity.sh prompts for name/email and writes ~/.gitconfig.local; [include] stanza added to dotfiles/.gitconfig; --non-interactive flag added to install.sh
+<!-- What changed recently that AI should know about? -->
+- [Date]: [Change description]
+- [Date]: [Change description]
 
 ### Known Issues
-- None
+<!-- Problems AI should be aware of -->
+- [Issue 1]: [Brief description]
+- [Issue 2]: [Brief description]
 
 ---
 
 ## 3. Key Concepts
 
 ### Domain Model
+<!-- Core entities and their relationships -->
 ```
-[Profile] ──extends──> [Base Profile]
-    │
-    └──includes──> [Package List]
-                       │
-                       ├── apt packages
-                       ├── snap packages
-                       ├── flatpak packages
-                       ├── deb packages (URL)
-                       └── custom scripts
-
-[Dotfiles repo] ──symlinked into──> [$HOME]
+[User] ──1:N── [Account] ──1:N── [Resource]
 ```
 
-### Profile Hierarchy
-| Profile | Inherits From | Purpose |
-|---------|--------------|---------|
-| base | — | Core CLI tools every machine needs |
-| desktop | base | GUI apps and desktop environment tools |
-| server | base | Server/headless tooling |
-| dev | desktop | Full developer environment |
+### Bounded Contexts
+<!-- If using DDD, list bounded contexts -->
+| Context | Responsibility | Key Entities |
+|---------|---------------|--------------|
+| [Context 1] | [What it handles] | [Entities] |
 
 ### Critical Paths
-1. **Full provisioning**: `./install.sh --profile dev` → reads profile YAML → installs packages by type → links dotfiles
-2. **Package install only**: `./install.sh --profile base --skip-dotfiles`
-3. **Dotfiles only**: `./install.sh --dotfiles-only`
+<!-- Most important user journeys -->
+1. **[Path Name]**: [Step 1] → [Step 2] → [Step 3]
+2. **[Path Name]**: [Step 1] → [Step 2] → [Step 3]
 
 ---
 
@@ -117,59 +93,29 @@
 ### Entry Points
 | Purpose | Location |
 |---------|----------|
-| Main provisioning script | `install.sh` |
-| Package manifests | `profiles/` |
-| Dotfiles | `dotfiles/` |
-| Package type installers | `src/` |
+| Application start | `src/index.ts` |
+| API routes | `src/api/routes/` |
+| Main business logic | `src/services/` |
+| Configuration | `src/config/` |
 
 ### Key Files
+<!-- Files AI should prioritize reading -->
 ```
-dotfiles/
-├── install.sh                  # Main entrypoint
-├── profiles/
-│   ├── base.yaml              # Base profile (always applied)
-│   ├── desktop.yaml           # Desktop profile
-│   ├── server.yaml            # Server profile
-│   └── dev.yaml               # Developer profile
-├── dotfiles/                   # Actual config files symlinked into $HOME
-│   ├── .bashrc                # Prompt, history, colour, sources .bash_aliases
-│   ├── .bash_aliases          # ll, la, grep, git shortcuts, navigation
-│   ├── .bash_profile          # Login shell; sources .bashrc
-│   └── .gitconfig             # Core git settings and aliases (no identity)
-├── src/                        # Package type install helpers
-│   ├── packages.sh            # Package install dispatcher
-│   ├── dotfiles.sh            # Symlink management
-│   └── utils.sh               # Shared utilities (logging, etc.)
-├── tests/
-│   └── smoke/                 # Docker-based smoke tests (FEAT-0004)
-│       ├── Dockerfile         # Ubuntu 22.04 with sudo+git+python3
-│       ├── run-tests.sh       # Main runner; builds image, runs scenarios
-│       ├── helpers.sh         # assert_* functions
-│       └── tests/             # One script per scenario
-├── .github/
-│   └── workflows/
-│       └── smoke-tests.yml    # Runs smoke tests on every PR
-├── .ai/
-│   ├── DIRECTIVES.md          # Mandatory AI rules (read first every session)
-│   ├── memory/                # Persistent AI memory (SESSION_LOG, LEARNINGS, TRACEABILITY, AUTHORIZATIONS)
-│   └── decisions/             # Architecture Decision Records (README, INDEX, template)
-└── docs/
-    └── runbooks/
-        └── template-sync.md   # How to pull future upstream template updates
+src/
+├── index.ts              # Application entry
+├── config/index.ts       # Configuration
+├── services/
+│   └── [core].service.ts # Core business logic
+└── models/
+    └── [main].model.ts   # Main domain model
 ```
 
 ### Module Map
+<!-- How major modules relate -->
 ```
-install.sh
-  → src/utils.sh              (logging, error handling)
-  → profiles/<name>.yaml      (package manifest for profile)
-  → src/packages.sh           (dispatch by package type)
-      → apt-get install
-      → snap install
-      → flatpak install
-      → wget + dpkg -i (deb)
-      → custom script runner
-  → src/dotfiles.sh           (symlink $HOME dotfiles)
+[API Layer] → [Service Layer] → [Repository Layer] → [Database]
+     ↓              ↓                  ↓
+[Validators]   [Domain Models]   [Query Builders]
 ```
 
 ---
@@ -177,23 +123,25 @@ install.sh
 ## 5. Development Rules
 
 ### Must Follow
-1. **Idempotent** - Running install.sh multiple times must be safe (no duplicate installs, no broken symlinks)
-2. **Profiles only change by spec** - Package list changes require an approved spec
-3. **No secrets in repo** - No credentials, tokens, or passwords anywhere
-4. **Bash compatibility** - Scripts must work on bash 5.x (Ubuntu 22.04+)
-5. **Fail loudly** - Exit non-zero and print clear errors; never silently skip failures
+<!-- Non-negotiable rules -->
+1. **All code must have tests** - No exceptions for business logic
+2. **Use existing patterns** - Check PATTERNS.md before creating new ones
+3. **No secrets in code** - Use environment variables
+4. **Spec before code** - Features require approved specs
 
 ### Prefer
-1. `set -euo pipefail` in all scripts
-2. Named functions over inline logic
-3. YAML for all configuration (not hardcoded lists in scripts)
-4. `sudo` only where explicitly needed (not blanket sudo on the whole script)
+<!-- Strong preferences -->
+1. Composition over inheritance
+2. Explicit over implicit
+3. Small functions (< 20 lines)
+4. Descriptive names over comments
 
 ### Avoid
-1. Hardcoding package lists in shell scripts — use YAML manifests
-2. `curl | bash` without checksum verification
-3. Modifying system files outside of explicitly stated scope
-4. Assuming internet access — check connectivity before fetching
+<!-- Anti-patterns and practices to avoid -->
+1. God classes/functions
+2. Deep nesting (> 3 levels)
+3. Magic numbers/strings
+4. Mutable global state
 
 ---
 
@@ -202,15 +150,16 @@ install.sh
 ### Coverage Expectations
 | Type | Target | Focus |
 |------|--------|-------|
-| Unit | Key functions | YAML parsing, symlink logic, package dispatch |
-| Integration | Per package type | Install a test package of each type in CI |
-| Smoke | Full run | Run install.sh --profile base in a Docker/VM |
+| Unit | 80% | Services, utilities |
+| Integration | Key paths | API endpoints |
+| E2E | Critical flows | User journeys |
 
 ### Test Locations
 ```
 tests/
-├── unit/           # bats or shellspec tests for individual functions
-└── smoke/          # Docker-based full provisioning smoke tests
+├── unit/           # src/__tests__/ also acceptable
+├── integration/
+└── e2e/
 ```
 
 ---
@@ -219,54 +168,78 @@ tests/
 
 ### Prerequisites
 ```bash
-# Stage 1 must already be complete (Ubuntu installed)
-ubuntu >= 22.04
-bash >= 5.0
-git >= 2.x
+# Required tools
+[tool1] >= [version]
+[tool2] >= [version]
 ```
 
 ### Quick Start
 ```bash
-git clone <repo-url> ~/dotfiles
-cd ~/dotfiles
-./install.sh --profile base
+# Clone and setup
+git clone [repo-url]
+cd [project]
+[install command]
+[setup command]
+[run command]
 ```
 
-### No Environment Variables Required
-All configuration is declarative YAML. No `.env` files needed.
+### Environment Variables
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | Database connection string |
+| `API_KEY` | Yes | External service API key |
+| `DEBUG` | No | Enable debug logging |
 
 ---
 
 ## 8. AI Assistant Guidelines
 
 ### When Generating Code
-1. **Bash first** - All scripts in bash; no Python/Ruby/etc. dependencies for provisioning
-2. **YAML config** - Package lists always in YAML, never hardcoded in scripts
-3. **Idempotent** - Every operation must be safe to run twice
-4. **Minimal sudo** - Elevate only for operations that require it
+1. **Read before writing** - Understand existing patterns first
+2. **Match style** - Follow PATTERNS.md conventions
+3. **Minimal changes** - Don't refactor unrelated code
+4. **Include tests** - Generate tests alongside implementation
 
 ### When Answering Questions
-1. **Reference files** - Point to specific script locations
-2. **Check profiles/** - Package decisions belong in profile YAML, not scripts
+1. **Reference files** - Point to specific code locations
+2. **Cite architecture** - Link to relevant ADRs
+3. **Stay current** - Check "Recent Changes" above
 
 ### When Debugging
-1. **Check utils.sh** - Logging and error helpers live there
-2. **Check profile YAML** - Most "why isn't X installed" issues are manifest issues
+1. **Check known issues** - Review section above first
+2. **Trace data flow** - Follow the module map
+3. **Verify assumptions** - Read actual implementation
 
 ### Forbidden Actions
-- Do not add packages to profiles without a spec
-- Do not modify system-level config files (fstab, sudoers, etc.) without explicit spec
-- Do not add network calls without connectivity checks
-- Do not store credentials or API keys anywhere in the repo
+<!-- Things AI should never do -->
+- Delete or modify test files without explicit request
+- Change security-related code without review
+- Modify configuration files without confirmation
+- Add dependencies without discussion
 
 ---
 
 ## 9. Related Documentation
 
 ### Internal
-- [specs/](../specs/) - Feature specifications
+- [specs/](specs/) - Product specifications
 - [architecture/](architecture/) - Technical architecture
 - [decisions/](decisions/) - Architecture Decision Records
+
+### External
+- [Design System]([link])
+- [API Documentation]([link])
+- [Runbook]([link])
+
+---
+
+## 10. Contacts
+
+| Role | Contact | When to Escalate |
+|------|---------|-----------------|
+| Tech Lead | @[username] | Architecture decisions |
+| Product | @[username] | Requirement clarifications |
+| Security | @[username] | Security concerns |
 
 ---
 
@@ -274,6 +247,13 @@ All configuration is declarative YAML. No `.env` files needed.
 
 | Field | Value |
 |-------|-------|
-| Last Updated | 2026-02-26 |
-| Update Frequency | After each implemented spec |
-| Owner | Jerry |
+| Last Updated | YYYY-MM-DD |
+| Update Frequency | Weekly / After major changes |
+| Owner | [Team/Person] |
+
+### Update Checklist
+When updating this document:
+- [ ] Update "Current State" section
+- [ ] Review "Key Files" for accuracy
+- [ ] Check "Known Issues" is current
+- [ ] Verify links are working
