@@ -1,466 +1,361 @@
 # Code Patterns & Conventions
 
-> **For AI Assistants**: Follow these patterns when generating or modifying code. Consistency is critical.
+> **For AI Assistants**: Follow these patterns when generating or modifying code in this repository. Every pattern here reflects the actual Bash idioms used in `src/`. Consistency is critical.
 
 ## Document Info
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0.0 |
-| Last Updated | YYYY-MM-DD |
+| Version | 1.1.0 |
+| Last Updated | 2026-02-26 |
 
 ---
 
 ## 1. General Principles
 
-### 1.1 Core Values
-1. **Clarity over cleverness** - Code should be readable by humans first
-2. **Explicit over implicit** - Make behavior obvious
-3. **Composition over inheritance** - Prefer small, composable units
-4. **Fail fast** - Validate early, fail with clear errors
-
-### 1.2 SOLID Principles
-- **S**ingle Responsibility - One reason to change
-- **O**pen/Closed - Open for extension, closed for modification
-- **L**iskov Substitution - Subtypes must be substitutable
-- **I**nterface Segregation - Small, focused interfaces
-- **D**ependency Inversion - Depend on abstractions
+1. **Clarity over cleverness** — Explicit, readable Bash beats a clever one-liner
+2. **Fail fast** — `set -euo pipefail` ensures errors are never silently swallowed
+3. **Idempotency** — Every function must be safe to run twice; always check state before acting
+4. **Minimal globals** — All logic lives in named functions with `local` variables; only `install.sh` owns global state
+5. **No direct echo** — All user output goes through the logging functions in `src/utils.sh`
 
 ---
 
-## 2. Naming Conventions
+## 2. Script Header Pattern
 
-### 2.1 General Rules
+Every script in `src/` **must** start exactly like this:
+
+```bash
+#!/usr/bin/env bash
+# Brief one-line description of what this script does.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/utils.sh"
+```
+
+### Why `set -euo pipefail`
+
+| Flag | Effect |
+|------|--------|
+| `-e` | Exit immediately on any command returning non-zero |
+| `-u` | Treat unset variables as errors |
+| `-o pipefail` | Propagate failures through pipes (not just the last command) |
+
+### Why `SCRIPT_DIR` at the top
+
+Each script must resolve its own location so it can be run **standalone** (e.g. `bash src/setup-ssh.sh`) as well as sourced by `install.sh`. Without this, relative paths break.
+
+> **IMPORTANT**: `install.sh` captures `_INSTALL_ROOT="${SCRIPT_DIR}"` before sourcing anything, because sourced scripts redefine `SCRIPT_DIR` at global scope. Never add `SCRIPT_DIR` assignments to `install.sh` after the initial capture. See `ARCHITECTURE.md §5` for full detail.
+
+---
+
+## 3. Function Pattern
+
+All logic must be inside named functions. No code at the top level of a sourced script (except variable declarations and the standalone guard at the bottom).
+
+```bash
+# Pattern: function with local variables only
+function_name() {
+  local arg1="${1}"
+  local arg2="${2:-default_value}"
+  local result
+
+  # ... implementation ...
+
+  log_info "Done: ${result}"
+}
+```
+
+### Rules
+
+- All variables inside functions are `local` — no global side effects
+- Functions take positional arguments `$1`, `$2`, etc.; document them with a comment if non-obvious
+- Functions that produce output use `log_*` functions, not `echo` or `printf`
+- Functions that modify the filesystem check state first (idempotency pattern — see §6)
+
+---
+
+## 4. Logging Pattern
+
+**Never use `echo` directly.** All output goes through the logging functions defined in `src/utils.sh`.
+
+```bash
+log_info  "Informational message (green)"
+log_warn  "Warning — something unexpected (yellow)"
+log_error "Fatal error — about to exit (red)"
+log_step  "Section heading (bold blue)"
+log_dry_run "Would do X (shown only in --dry-run mode)"
+```
+
+### Usage examples
+
+```bash
+install_apt_packages() {
+  log_step "Installing apt packages"
+
+  for pkg in "${apt_packages[@]}"; do
+    if dpkg -l "${pkg}" &>/dev/null; then
+      log_info "Already installed: ${pkg}"
+      continue
+    fi
+
+    if [[ "${DRY_RUN}" == "true" ]]; then
+      log_dry_run "Would install apt package: ${pkg}"
+      continue
+    fi
+
+    log_info "Installing: ${pkg}"
+    sudo apt-get install -y "${pkg}"
+  done
+}
+```
+
+---
+
+## 5. Dry-Run Pattern
+
+Every function that writes to the filesystem or runs side-effecting commands **must** check `DRY_RUN` and short-circuit with `log_dry_run`.
+
+```bash
+_write_ssh_config() {
+  local config_path="${1}"
+
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    log_dry_run "Would write ${config_path}"
+    return 0
+  fi
+
+  # ... actual write logic ...
+  log_info "Wrote ${config_path}"
+}
+```
+
+`DRY_RUN` is set by `install.sh` based on the `--dry-run` flag and exported so sourced scripts can read it.
+
+---
+
+## 6. Idempotency Pattern
+
+Before performing any action that changes system state, check whether it has already been done. If yes, log and skip.
+
+```bash
+_generate_keypair() {
+  local key_path="${1}"
+
+  if [[ -f "${key_path}" ]]; then
+    log_info "SSH key already exists: ${key_path}"
+    return 0
+  fi
+
+  log_info "Generating ed25519 keypair: ${key_path}"
+  ssh-keygen -t ed25519 -f "${key_path}" -C "${USER}@$(hostname)" -N ""
+}
+```
+
+```bash
+_install_apt_package() {
+  local pkg="${1}"
+
+  if dpkg -l "${pkg}" &>/dev/null; then
+    log_info "Already installed: ${pkg}"
+    return 0
+  fi
+
+  sudo apt-get install -y "${pkg}"
+}
+```
+
+---
+
+## 7. Standalone Script Guard
+
+Scripts in `src/` that can be run directly (not just sourced) must include this guard at the **bottom** of the file:
+
+```bash
+# ---------------------------------------------------------------------------
+# Standalone entrypoint (run directly, not sourced)
+# ---------------------------------------------------------------------------
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  # Parse any standalone-specific flags here
+  setup_ssh_key
+fi
+```
+
+This pattern allows the script to be sourced by `install.sh` without executing immediately, while still supporting direct invocation for testing and manual use.
+
+---
+
+## 8. YAML Parsing Pattern
+
+Profile YAML is parsed using `python3` inline. Three helper functions are available from `src/utils.sh`:
+
+```bash
+# Get a single scalar value
+# Usage: yaml_get <file> <key>
+profile_name="$(yaml_get "${profile_file}" "name")"
+
+# Get a flat list of values
+# Usage: yaml_get_list <file> <key>
+mapfile -t apt_packages < <(yaml_get_list "${profile_file}" "packages.apt")
+
+# Get a list of key:value pairs (for structured list items)
+# Usage: yaml_get_list_pairs <file> <key> <pair_key>
+mapfile -t snap_entries < <(yaml_get_list_pairs "${profile_file}" "packages.snap" "name")
+```
+
+These functions use `python3 -c` with inline Python to parse YAML. They require `python3-yaml` to be available (pre-installed on Ubuntu 22.04 or present in the Dockerfile bootstrap layer).
+
+---
+
+## 9. Non-Interactive Mode Pattern
+
+Scripts that prompt the user must check `NON_INTERACTIVE` and provide a safe default or skip the prompt:
+
+```bash
+setup_git_identity() {
+  if [[ "${NON_INTERACTIVE:-false}" == "true" ]]; then
+    log_info "Non-interactive mode: skipping git identity setup"
+    return 0
+  fi
+
+  # ... interactive prompts ...
+}
+```
+
+`NON_INTERACTIVE` is exported by `install.sh` when `--non-interactive` is passed. Smoke tests always set `NON_INTERACTIVE=true` before invoking `install.sh`.
+
+---
+
+## 10. Naming Conventions
 
 | Element | Convention | Example |
 |---------|------------|---------|
-| Files | kebab-case | `user-service.ts` |
-| Classes | PascalCase | `UserService` |
-| Functions | camelCase | `getUserById` |
-| Constants | SCREAMING_SNAKE | `MAX_RETRIES` |
-| Variables | camelCase | `userCount` |
-| Interfaces | PascalCase (no I prefix) | `UserRepository` |
-| Types | PascalCase | `UserCreateInput` |
-| Enums | PascalCase | `UserStatus.Active` |
-
-### 2.2 Naming Patterns
-
-```
-# Functions - verb + noun
-createUser(), getUserById(), deleteExpiredSessions()
-
-# Booleans - is/has/can/should prefix
-isActive, hasPermission, canEdit, shouldRetry
-
-# Collections - plural nouns
-users, pendingOrders, activeConnections
-
-# Handlers - on + event
-onUserCreated, onPaymentReceived
-
-# Factories - create + noun
-createLogger(), createDatabaseConnection()
-```
-
-### 2.3 Domain Language
-<!-- Define ubiquitous language for your domain -->
-
-| Term | Definition | Usage |
-|------|------------|-------|
-| [Term] | [Definition] | [How to use in code] |
+| Script files | `kebab-case.sh` | `setup-ssh.sh` |
+| Public functions | `snake_case` | `setup_ssh_key()` |
+| Private helpers | `_snake_case` (leading underscore) | `_write_ssh_config()` |
+| Global constants | `SCREAMING_SNAKE_CASE` | `DRY_RUN`, `NON_INTERACTIVE` |
+| Local variables | `snake_case` | `local key_path` |
+| Profile files | `kebab-case.yaml` | `base.yaml`, `dev.yaml` |
 
 ---
 
-## 3. File Organization
+## 11. Anti-Patterns — NEVER DO THESE
 
-### 3.1 Directory Structure
+### 11.1 `[[ cond ]] && cmd` as a statement under `set -e`
 
-> **IMPORTANT — `scripts/` is off-limits for implementation code.**
-> The `scripts/` folder at the repository root contains **template repo tooling only** — specifically the spec ingestion scripts (`ingest-spec.sh`, `Invoke-SpecIngestion.ps1`). These are infrastructure for the template itself, not a location for agent-created code.
-> All application code generated by AI assistants **must** live under `src/`. Create `src/` if it does not yet exist.
+```bash
+# WRONG — when [[ -f "$file" ]] is FALSE, bash returns exit 1,
+# which triggers errexit and kills the script.
+[[ -f "${key_path}" ]] && log_info "Key exists"
 
-```
-src/
-├── api/                    # HTTP layer
-│   ├── routes/            # Route definitions
-│   ├── middleware/        # Express/Koa middleware
-│   ├── validators/        # Request validation
-│   └── transformers/      # Response transformation
-│
-├── services/              # Business logic
-│   ├── user/             # Feature-based organization
-│   │   ├── user.service.ts
-│   │   ├── user.service.test.ts
-│   │   └── index.ts
-│   └── ...
-│
-├── repositories/          # Data access
-│   ├── user.repository.ts
-│   └── ...
-│
-├── models/               # Domain models
-│   ├── user.model.ts
-│   └── ...
-│
-├── lib/                  # Shared libraries
-│   ├── database/
-│   ├── cache/
-│   └── logger/
-│
-├── config/               # Configuration
-│   └── index.ts
-│
-└── types/                # Type definitions
-    └── index.ts
+# CORRECT — use if/then
+if [[ -f "${key_path}" ]]; then
+  log_info "Key exists"
+fi
 ```
 
-### 3.2 File Contents Order
+**Root cause**: `[[ false ]]` returns exit code 1. Under `set -e`, any non-zero exit causes the script to abort — even the left-hand side of `&&`.
 
-```typescript
-// 1. Imports (external, then internal)
-import { external } from 'external-lib';
-import { internal } from '@/lib/internal';
+### 11.2 Bare `return` in non-interactive shell guards
 
-// 2. Types/Interfaces
-interface UserInput { ... }
+```bash
+# WRONG — in dotfiles sourced by .bash_profile
+# The failed [[ $- == *i* ]] test returns exit 1.
+# Bare `return` inherits that exit code.
+# .bash_profile propagates it → `bash --login -c exit` returns 1.
+[[ $- == *i* ]] || return
 
-// 3. Constants
-const MAX_RETRIES = 3;
+# CORRECT — always return 0 explicitly
+[[ $- == *i* ]] || return 0
+```
 
-// 4. Main export (class or function)
-export class UserService { ... }
+### 11.3 Hardcoded package names in scripts
 
-// 5. Helper functions (private)
-function validateInput() { ... }
+```bash
+# WRONG
+sudo apt-get install -y git curl build-essential
+
+# CORRECT — read from profile YAML
+mapfile -t apt_packages < <(yaml_get_list "${profile_file}" "packages.apt")
+for pkg in "${apt_packages[@]}"; do
+  _install_apt_package "${pkg}"
+done
+```
+
+### 11.4 Direct echo for user output
+
+```bash
+# WRONG
+echo "Installing packages..."
+echo "Error: file not found"
+
+# CORRECT
+log_step "Installing packages"
+log_error "File not found: ${path}"
+```
+
+### 11.5 Running as root
+
+```bash
+# WRONG — do not sudo the whole script
+sudo bash install.sh
+
+# CORRECT — run as normal user; individual package commands use sudo internally
+bash install.sh --profile base
 ```
 
 ---
 
-## 4. Code Patterns
+## 12. Smoke Test Patterns
 
-### 4.1 Error Handling
+### Test script header
 
-**Pattern: Result Type**
-```typescript
-type Result<T, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+```bash
+#!/usr/bin/env bash
+# Scenario: brief description of what this test covers.
+# Verifies: AC-NNN from FEAT-XXXX
+set -uo pipefail   # Note: NOT -e — tests must continue after failures
 
-// Usage
-function getUser(id: string): Result<User> {
-  const user = db.find(id);
-  if (!user) {
-    return { success: false, error: new NotFoundError('User not found') };
-  }
-  return { success: true, data: user };
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
-// Handling
-const result = getUser('123');
-if (!result.success) {
-  logger.error(result.error);
-  return;
-}
-const user = result.data;
+source "${SCRIPT_DIR}/../helpers.sh"
 ```
 
-**Pattern: Custom Error Classes**
-```typescript
-class AppError extends Error {
-  constructor(
-    message: string,
-    public code: string,
-    public statusCode: number = 500,
-    public isOperational: boolean = true
-  ) {
-    super(message);
-    this.name = this.constructor.name;
-  }
-}
+Note `set -uo pipefail` (not `-euo`) — tests must run through all assertions and report failures rather than aborting.
 
-class NotFoundError extends AppError {
-  constructor(resource: string) {
-    super(`${resource} not found`, 'NOT_FOUND', 404);
-  }
-}
+### Assertion helpers (from `helpers.sh`)
 
-class ValidationError extends AppError {
-  constructor(message: string) {
-    super(message, 'VALIDATION_ERROR', 400);
-  }
-}
+```bash
+_pass "Description of what passed"
+_fail "Description of what failed"
+assert_file_perms "${path}" "600"          # Check octal permissions
+assert_file_contains "${path}" "substring"  # Check file content
+assert_output_contains "substring" <command> [args...]  # Check command output
+finish  # Print summary and exit with correct code
 ```
 
-### 4.2 Dependency Injection
+### Running install.sh in tests
 
-```typescript
-// Define interface
-interface UserRepository {
-  findById(id: string): Promise<User | null>;
-  save(user: User): Promise<User>;
-}
-
-// Service depends on abstraction
-class UserService {
-  constructor(private userRepo: UserRepository) {}
-
-  async getUser(id: string): Promise<User> {
-    const user = await this.userRepo.findById(id);
-    if (!user) throw new NotFoundError('User');
-    return user;
-  }
-}
-
-// Inject implementation
-const userService = new UserService(new PostgresUserRepository(db));
+```bash
+# Standard test invocation pattern
+printf "Test User\ntest@example.com\n" \
+  | NON_INTERACTIVE=true bash "${REPO_ROOT}/install.sh" \
+    --profile base \
+    --dotfiles-only \
+    --force \
+    --non-interactive \
+    &>/dev/null
 ```
 
-### 4.3 Repository Pattern
-
-```typescript
-interface Repository<T, ID> {
-  findById(id: ID): Promise<T | null>;
-  findAll(filter?: Partial<T>): Promise<T[]>;
-  save(entity: T): Promise<T>;
-  delete(id: ID): Promise<void>;
-}
-
-class UserRepository implements Repository<User, string> {
-  constructor(private db: Database) {}
-
-  async findById(id: string): Promise<User | null> {
-    const row = await this.db.query('SELECT * FROM users WHERE id = $1', [id]);
-    return row ? this.toEntity(row) : null;
-  }
-
-  private toEntity(row: any): User {
-    return new User(row.id, row.email, row.name);
-  }
-}
-```
-
-### 4.4 Service Layer Pattern
-
-```typescript
-class OrderService {
-  constructor(
-    private orderRepo: OrderRepository,
-    private paymentService: PaymentService,
-    private notificationService: NotificationService
-  ) {}
-
-  async createOrder(input: CreateOrderInput): Promise<Order> {
-    // 1. Validate
-    this.validateInput(input);
-
-    // 2. Business logic
-    const order = Order.create(input);
-
-    // 3. Persist
-    const savedOrder = await this.orderRepo.save(order);
-
-    // 4. Side effects
-    await this.notificationService.sendOrderConfirmation(savedOrder);
-
-    return savedOrder;
-  }
-}
-```
-
-### 4.5 Factory Pattern
-
-```typescript
-class NotificationFactory {
-  static create(type: NotificationType, config: NotificationConfig): Notification {
-    switch (type) {
-      case 'email':
-        return new EmailNotification(config);
-      case 'sms':
-        return new SMSNotification(config);
-      case 'push':
-        return new PushNotification(config);
-      default:
-        throw new Error(`Unknown notification type: ${type}`);
-    }
-  }
-}
-```
+Always use `--force` in smoke tests (Ubuntu's `useradd -m` pre-creates `/etc/skel` copies in `$HOME`).
 
 ---
 
-## 5. API Patterns
-
-### 5.1 REST Conventions
-
-| Action | Method | Path | Response |
-|--------|--------|------|----------|
-| List | GET | `/users` | 200 + array |
-| Get | GET | `/users/:id` | 200 + object |
-| Create | POST | `/users` | 201 + object |
-| Update | PUT | `/users/:id` | 200 + object |
-| Partial Update | PATCH | `/users/:id` | 200 + object |
-| Delete | DELETE | `/users/:id` | 204 |
-
-### 5.2 Response Format
-
-```json
-// Success
-{
-  "data": { ... },
-  "meta": {
-    "page": 1,
-    "limit": 20,
-    "total": 100
-  }
-}
-
-// Error
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input",
-    "details": [
-      { "field": "email", "message": "Invalid email format" }
-    ]
-  }
-}
-```
-
-### 5.3 Controller Pattern
-
-```typescript
-class UserController {
-  constructor(private userService: UserService) {}
-
-  async getUser(req: Request, res: Response) {
-    const { id } = req.params;
-
-    const result = await this.userService.getUser(id);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.error });
-    }
-
-    return res.json({ data: result.data });
-  }
-}
-```
-
----
-
-## 6. Testing Patterns
-
-### 6.1 Test Organization
-
-```
-tests/
-├── unit/                  # Unit tests (isolated)
-│   └── services/
-│       └── user.service.test.ts
-├── integration/           # Integration tests (with deps)
-│   └── api/
-│       └── users.test.ts
-└── e2e/                   # End-to-end tests
-    └── user-flow.test.ts
-```
-
-### 6.2 Test Structure (AAA)
-
-```typescript
-describe('UserService', () => {
-  describe('getUser', () => {
-    it('should return user when found', async () => {
-      // Arrange
-      const mockUser = { id: '1', email: 'test@example.com' };
-      const mockRepo = { findById: jest.fn().mockResolvedValue(mockUser) };
-      const service = new UserService(mockRepo);
-
-      // Act
-      const result = await service.getUser('1');
-
-      // Assert
-      expect(result).toEqual(mockUser);
-      expect(mockRepo.findById).toHaveBeenCalledWith('1');
-    });
-
-    it('should throw NotFoundError when user not found', async () => {
-      // Arrange
-      const mockRepo = { findById: jest.fn().mockResolvedValue(null) };
-      const service = new UserService(mockRepo);
-
-      // Act & Assert
-      await expect(service.getUser('999')).rejects.toThrow(NotFoundError);
-    });
-  });
-});
-```
-
-### 6.3 Test Fixtures
-
-```typescript
-// fixtures/users.ts
-export const createTestUser = (overrides: Partial<User> = {}): User => ({
-  id: 'test-user-id',
-  email: 'test@example.com',
-  name: 'Test User',
-  createdAt: new Date('2024-01-01'),
-  ...overrides,
-});
-```
-
----
-
-## 7. Documentation Patterns
-
-### 7.1 Code Comments
-
-```typescript
-// DO: Explain WHY, not WHAT
-// Retry with exponential backoff to handle transient network failures
-const result = await retry(fetchData, { maxAttempts: 3 });
-
-// DON'T: State the obvious
-// Loop through users
-for (const user of users) { ... }
-```
-
-### 7.2 JSDoc for Public APIs
-
-```typescript
-/**
- * Creates a new user account.
- *
- * @param input - User creation data
- * @returns The created user
- * @throws {ValidationError} If input is invalid
- * @throws {ConflictError} If email already exists
- *
- * @example
- * const user = await userService.createUser({
- *   email: 'user@example.com',
- *   name: 'John Doe'
- * });
- */
-async createUser(input: CreateUserInput): Promise<User> { ... }
-```
-
----
-
-## 8. Anti-Patterns to Avoid
-
-| Anti-Pattern | Problem | Solution |
-|--------------|---------|----------|
-| God Class | Too many responsibilities | Split into focused services |
-| Magic Numbers | Unclear meaning | Use named constants |
-| Deep Nesting | Hard to read | Extract functions, early returns |
-| Shotgun Surgery | Changes spread everywhere | Improve cohesion |
-| Primitive Obsession | Primitives instead of objects | Create domain types |
-| Feature Envy | Method uses another class's data | Move method to that class |
-
----
-
-## 9. Revision History
+## 13. Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0.0 | YYYY-MM-DD | [Name] | Initial version |
+| 1.0.0 | 2026-02-26 | Jerry van Heerikhuize | Initial real content, replacing TypeScript template (FEAT-0016) |
+| 1.1.0 | 2026-02-26 | Jerry van Heerikhuize | Added §12 smoke test patterns |

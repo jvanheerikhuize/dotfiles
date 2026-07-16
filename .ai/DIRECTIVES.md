@@ -22,8 +22,9 @@
   2. **Require spec approval** - Do not implement new features unless the spec status is `approved` in specs.config.yaml.
 -->
 
-1. <!-- Directive: [Short Title] --> [Full directive text here]
-2. <!-- Directive: [Short Title] --> [Full directive text here]
+1. **Follow the established patterns before touching existing code** — Before modifying any file in `src/`, consult `.ai/architecture/PATTERNS.md` (Claude Code loads the essentials automatically via `.claude/rules/`). It documents accumulated gotchas and hard-won patterns. Skipping this step risks re-introducing known bugs.
+2. **Update architecture docs before committing** — If your change adds, removes, or renames a component, entry point, function, or pattern, update `.ai/CONTEXT.md`, `.ai/architecture/ARCHITECTURE.md`, and `.ai/architecture/PATTERNS.md` **before** the commit. These files must reflect the current state of the repo, not a past state.
+3. **Create an ADR for every qualifying decision** — Whenever you make a decision that is architectural, a technology choice, security-relevant, hard to reverse, or cross-cutting, create an ADR using the template at `.ai/decisions/template.md` and register it in `.ai/decisions/INDEX.md` in the **same session** as the decision. Do not defer.
 
 ---
 
@@ -41,7 +42,11 @@ Actions that must **never** be taken, under any circumstances:
 -->
 
 - Do NOT place implementation code in `scripts/` — that directory contains template repo tooling only (spec ingestion scripts). All AI-generated application code must go in `src/`.
-- [ ] [Forbidden action 2]
+- Do NOT commit directly to `main` or `master` — all changes must go through a feature branch + PR.
+- Do NOT implement a spec whose `status` is not `approved` in `specs.config.yaml`.
+- Do NOT hardcode package names in scripts — all package lists belong in `profiles/*.yaml`.
+- Do NOT use `[[ cond ]] && cmd` as a standalone statement — it triggers `errexit` under `set -e`; use `if/then` instead.
+- Do NOT write output with `echo` directly — all user-facing output must go through `log_info`, `log_warn`, `log_error`, `log_step`, or `log_dry_run` from `src/utils.sh`.
 
 ---
 
@@ -58,9 +63,22 @@ Before making **any** change, verify all of the following:
   - [ ] Verify no existing test will break
 -->
 
+### Pre-implementation checks
+
+- [ ] Confirm the spec `status` is `approved` in `specs.config.yaml` before writing any code
 - [ ] Read `.ai/CONTEXT.md` to confirm current project state
 - [ ] Check `.ai/decisions/INDEX.md` to understand past decisions before acting
-- [ ] [Pre-action check 3]
+- [ ] Check `.ai/memory/TRACEABILITY.md` to see if related work already exists
+
+### Pre-commit checks
+
+- [ ] Create an ADR for any decision matching the trigger list (§3a) — do this **before** committing; skipping creates untracked architectural debt
+- [ ] Update `.ai/CONTEXT.md`, `.ai/architecture/ARCHITECTURE.md`, and `.ai/architecture/PATTERNS.md` if any component, entry point, flag, or code pattern changed — skipping leaves future AI sessions working from stale context
+- [ ] Append a new row to `.ai/memory/TRACEABILITY.md` for each implementation link established this session
+
+### End-of-session checks
+
+- [ ] Verify all TRACEABILITY.md rows for this session are complete (Request → Spec → Branch/PR → Status)
 
 ---
 
@@ -82,24 +100,21 @@ See [.ai/decisions/README.md](.ai/decisions/README.md) for the full trigger list
 
 ## 3b. Memory Maintenance (Required)
 
-The `.ai/memory/` directory is your persistent memory. You **MUST** maintain it as follows:
+The `.ai/memory/` directory holds the project's audit records. You **MUST** maintain it as follows:
 
-### At the start of every session
-1. Read [SESSION_LOG.md](.ai/memory/SESSION_LOG.md) — check the most recent entry for open items and recent state
-2. Read [LEARNINGS.md](.ai/memory/LEARNINGS.md) — absorb accumulated project knowledge before acting
-3. Read [TRACEABILITY.md](.ai/memory/TRACEABILITY.md) — check if related work exists before starting
+### At the start of a task
+- Read [TRACEABILITY.md](.ai/memory/TRACEABILITY.md) — check if related work exists before starting
 
 ### During a session
 - Append to [TRACEABILITY.md](.ai/memory/TRACEABILITY.md) as each link in the chain is established (do not batch at the end)
-- Append to [LEARNINGS.md](.ai/memory/LEARNINGS.md) whenever you discover something non-obvious
+- Record non-obvious gotchas where they belong: reusable code patterns go in `.ai/architecture/PATTERNS.md`; assistant-specific session context is handled by the assistant's own memory (Claude Code's built-in auto memory) — do not maintain a separate session log or learnings file here
 
 ### At the end of every session
-1. Append a new entry to [SESSION_LOG.md](.ai/memory/SESSION_LOG.md) using the template at the top of that file
-2. Verify TRACEABILITY.md rows are complete for all work done this session
+- Verify TRACEABILITY.md rows are complete for all work done this session
 
 See [.ai/memory/README.md](.ai/memory/README.md) for the full traceability chain and update triggers.
 
-**Do not skip memory updates.** They are the mechanism by which context survives across sessions.
+**Do not skip traceability updates.** They are the audit trail linking requests to specs to shipped code.
 
 ---
 
@@ -152,9 +167,11 @@ When directives, user instructions, or constraints conflict, resolve them in thi
   5. Readability — Prefer clear code as a tiebreaker
 -->
 
-1. [Highest priority]
-2. [Second priority]
-3. [Third priority]
+1. **Safety** — Never compromise system safety, security, or data integrity; never commit credentials or bypass safety checks.
+2. **Spec compliance** — Implement exactly what the approved spec requires; no extras, no omissions, no scope creep.
+3. **Correctness** — Code must be correct before it is clean or performant; failing tests are never acceptable.
+4. **Idempotency** — Every install/setup function must be safe to run twice without side effects.
+5. **Readability** — Prefer clear, explicit Bash over clever one-liners; future maintainers are the intended audience.
 
 ---
 
@@ -171,8 +188,10 @@ How the AI must communicate with the team:
   - Summarize every change set at the end of a session
 -->
 
-- [Communication rule 1]
-- [Communication rule 2]
+- Flag ambiguities or blockers in a spec **before** starting implementation — raise them immediately, not after writing code.
+- When referencing code, always cite the file path and line number.
+- Summarize all changes made at the end of a session, including which acceptance criteria were satisfied and which files were modified.
+- If a user instruction conflicts with a directive in this file, flag the conflict explicitly before proceeding — do not silently resolve it.
 
 ---
 
@@ -189,8 +208,11 @@ Rules that apply specifically to this project's domain or stack:
   - PII fields must be marked and never logged
 -->
 
-- [Domain rule 1]
-- [Domain rule 2]
+- **Never use `[[ cond ]] && cmd` as a statement** under `set -e` — when the condition is false, bash returns exit code 1 which triggers `errexit`. Always use `if [[ cond ]]; then cmd; fi` instead.
+- **Always use `return 0`** (not bare `return`) in non-interactive shell guards (e.g., `[[ $- == *i* ]] || return 0`). A bare `return` inherits the exit code of the failed test expression, which propagates through `.bash_profile` and breaks `bash --login -c exit`.
+- **All output must go through the logging functions** from `src/utils.sh`: `log_info`, `log_warn`, `log_error`, `log_step`, `log_dry_run`. Never call `echo` directly in scripts.
+- **Never hardcode package names in scripts** — all package lists belong in `profiles/*.yaml`. Scripts must remain profile-agnostic.
+- **`openssh-client`** (not `ssh`) is the correct apt package name for SSH client tools (`ssh-keygen`, `ssh-copy-id`, `ssh`). This matters in both profiles and smoke test Dockerfiles.
 
 ---
 
@@ -199,6 +221,6 @@ Rules that apply specifically to this project's domain or stack:
 | Field | Value |
 |-------|-------|
 | Version | 1.0 |
-| Last Updated | YYYY-MM-DD |
-| Owner | [Team/Person] |
+| Last Updated | 2026-02-26 |
+| Owner | Jerry van Heerikhuize |
 | Review Frequency | On every major project change |

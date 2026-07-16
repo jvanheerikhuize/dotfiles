@@ -1,11 +1,15 @@
 # AI Memory System
 
-This directory is the AI's persistent memory for this project. It serves two purposes:
-
-1. **Persistent memory** — knowledge accumulated across sessions that would otherwise be lost
-2. **End-to-end traceability** — a complete audit trail from user request to deployed code
+This directory holds the project's persistent AI records: learned action permissions
+and an end-to-end audit trail from user request to deployed code.
 
 > **AI Assistants**: You are required to read and update these files as specified. See [DIRECTIVES.md](../DIRECTIVES.md) §3b for the mandatory rules.
+
+Session logs and learnings files used to live here too. They were retired: AI-assistant
+session context is handled by the assistant's own memory (e.g. Claude Code's built-in
+auto memory), and reusable code gotchas belong in
+[architecture/PATTERNS.md](../architecture/PATTERNS.md), which is the single source of
+truth for patterns and anti-patterns. Do not recreate `SESSION_LOG.md` or `LEARNINGS.md`.
 
 ---
 
@@ -14,21 +18,15 @@ This directory is the AI's persistent memory for this project. It serves two pur
 | File | Purpose | Read | Write |
 |------|---------|------|-------|
 | [AUTHORIZATIONS.md](AUTHORIZATIONS.md) | Base rules + learned action permissions | Before every gated action | When a new authorization is learned |
-| [SESSION_LOG.md](SESSION_LOG.md) | Chronological log of every AI session | Start of session | End of session |
-| [LEARNINGS.md](LEARNINGS.md) | Accumulated project knowledge and gotchas | Start of session | When something non-obvious is discovered |
 | [TRACEABILITY.md](TRACEABILITY.md) | Matrix linking requests → specs → ADRs → code → PRs | When implementing | When any link in the chain is established |
 
 ---
 
 ## When to Update Each File
 
-### SESSION_LOG.md
-- **Read**: At the start of every session to understand what was done previously and any open items left behind
-- **Write**: At the end of every session with a structured summary (see template inside the file)
-
-### LEARNINGS.md
-- **Read**: Before touching any existing code
-- **Write**: When you discover something non-obvious — a gotcha, an undocumented constraint, a pattern that diverges from what you'd expect, or domain knowledge that took investigation to uncover
+### AUTHORIZATIONS.md
+- **Read**: Before any gated action (see [DIRECTIVES.md](../DIRECTIVES.md) §3c for the categories and Decision Protocol)
+- **Write**: Immediately after the user grants or denies a new permission (new AUTH-NNN row)
 
 ### TRACEABILITY.md
 - **Read**: When starting work on a request, to check if related work exists

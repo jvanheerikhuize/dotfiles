@@ -163,7 +163,7 @@ specifications:
 
   - id: "FEAT-0010"
     file: "specs/features/FEAT-0010-nerd-font-installation.yaml"
-    status: "draft"
+    status: "approved"
     auto_implement: false
     priority: "low"
     assignee: "Jerry"
@@ -175,7 +175,7 @@ specifications:
 
   - id: "FEAT-0011"
     file: "specs/features/FEAT-0011-gnome-dconf-settings.yaml"
-    status: "draft"
+    status: "approved"
     auto_implement: false
     priority: "low"
     assignee: "Jerry"
@@ -188,7 +188,7 @@ specifications:
 
   - id: "FEAT-0012"
     file: "specs/features/FEAT-0012-log-to-file.yaml"
-    status: "draft"
+    status: "approved"
     auto_implement: false
     priority: "medium"
     assignee: "Jerry"
@@ -200,7 +200,7 @@ specifications:
 
   - id: "FEAT-0013"
     file: "specs/features/FEAT-0013-status-diff-command.yaml"
-    status: "draft"
+    status: "approved"
     auto_implement: false
     priority: "medium"
     assignee: "Jerry"
@@ -212,7 +212,7 @@ specifications:
 
   - id: "FEAT-0014"
     file: "specs/features/FEAT-0014-connectivity-check.yaml"
-    status: "draft"
+    status: "approved"
     auto_implement: false
     priority: "medium"
     assignee: "Jerry"
@@ -238,7 +238,7 @@ specifications:
 
   - id: "FEAT-0016"
     file: "specs/features/FEAT-0016-ai-context-and-directives-hardening.yaml"
-    status: "draft"
+    status: "implemented"
     auto_implement: false
     priority: "high"
     assignee: "Jerry"

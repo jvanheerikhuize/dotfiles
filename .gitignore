@@ -73,3 +73,5 @@ Desktop.ini
 
 # Claude Code
 .claude_cache/
+.claude/worktrees/
+.claude/settings.local.json

@@ -27,8 +27,6 @@ This directory contains structured documentation optimized for AI assistants (Cl
 │
 ├── memory/               # AI persistent memory
 │   ├── README.md         # How the memory system works
-│   ├── SESSION_LOG.md    # Chronological session log
-│   ├── LEARNINGS.md      # Accumulated project knowledge
 │   └── TRACEABILITY.md   # End-to-end traceability matrix
 ```
 

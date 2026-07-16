@@ -1,54 +1,9 @@
 {
-  "$schema": "https://claude.ai/schemas/claude-settings.json",
-  "version": "1.0",
-  "project": {
-    "name": "Enterprise Spec-Based Development Template",
-    "description": "Language-agnostic repository template for spec-driven development with Claude Code integration"
-  },
-  "preferences": {
-    "codeStyle": {
-      "preferExistingPatterns": true,
-      "avoidOverEngineering": true,
-      "followProjectConventions": true
-    },
-    "testing": {
-      "requireTests": true,
-      "testLocation": "colocated",
-      "coverageThreshold": 80
-    },
-    "documentation": {
-      "updateOnChange": true,
-      "inlineComments": "minimal",
-      "requireJsdoc": false
-    }
-  },
-  "specProcessing": {
-    "validateBeforeImplement": true,
-    "createFeatureBranch": true,
-    "branchNamingPattern": "spec/{spec-id}",
-    "commitMessagePattern": "feat({spec-id}): {title}",
-    "requireAllAcceptanceCriteria": true
-  },
-  "ignorePaths": [
-    "node_modules",
-    "dist",
-    "build",
-    ".git",
-    "coverage",
-    "*.log",
-    ".env*"
-  ],
-  "contextFiles": [
-    ".ai/CONTEXT.md",
-    ".ai/architecture/PATTERNS.md",
-    "README.md",
-    "specs.config.yaml",
-    "CONTRIBUTING.md"
-  ],
   "permissions": {
     "allow": [
       "Bash(git commit:*)",
-      "Bash(git push -u origin feat/FEAT-0009-ssh-key-setup)"
+      "Bash(bash -n:*)",
+      "Bash(bash tests/smoke/run-tests.sh:*)"
     ]
   }
 }
