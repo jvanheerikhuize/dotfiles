@@ -16,8 +16,6 @@
 |----------|---------|--------------|
 | [DIRECTIVES.md](DIRECTIVES.md) | Mandatory AI rules | **Always — before anything else** |
 | [memory/AUTHORIZATIONS.md](memory/AUTHORIZATIONS.md) | What the AI is/isn't allowed to do | Before any gated action |
-| [memory/SESSION_LOG.md](memory/SESSION_LOG.md) | Session history | Start of every session |
-| [memory/LEARNINGS.md](memory/LEARNINGS.md) | Accumulated project knowledge | Before touching existing code |
 | [memory/TRACEABILITY.md](memory/TRACEABILITY.md) | Request → code audit trail | When implementing or investigating |
 | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) | System design | Understanding HOW it's built |
 | [architecture/PATTERNS.md](architecture/PATTERNS.md) | Code conventions | Writing or reviewing code |
@@ -172,8 +170,7 @@ tests/smoke/
 ### Must Follow
 
 1. **Spec before code** — Features require an approved spec in `specs/features/` and `specs.config.yaml`
-2. **Read LEARNINGS.md first** — Before modifying any `src/` file, read `.ai/memory/LEARNINGS.md`
-3. **Use existing patterns** — Check `PATTERNS.md` before writing new Bash
+2. **Use existing patterns** — Check `PATTERNS.md` before writing new Bash (Claude Code loads the essentials automatically via `.claude/rules/`)
 4. **No secrets in code** — Use environment variables or interactive prompts only
 5. **Update architecture docs** — Update CONTEXT.md / ARCHITECTURE.md / PATTERNS.md before committing if project state changed
 
@@ -269,7 +266,7 @@ bash tests/smoke/run-tests.sh
 
 ### When Debugging
 
-1. **Check LEARNINGS.md** — Review accumulated gotchas before diagnosing
+1. **Check PATTERNS.md §11 (anti-patterns)** — Review documented gotchas before diagnosing
 2. **Trace the source chain** — `install.sh` sources all `src/` modules; check for `SCRIPT_DIR` clobbering
 3. **Verify Docker context** — Smoke tests run `--dotfiles-only`; packages must be pre-installed in Dockerfile
 

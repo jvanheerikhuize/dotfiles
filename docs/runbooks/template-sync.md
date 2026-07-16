@@ -59,9 +59,8 @@ git checkout template/main -- .ai/memory/README.md
 | `.ai/decisions/ADR-*.md` | **Keep yours** — these are your project's decisions |
 | `.ai/memory/README.md` | Take from template |
 | `.ai/memory/AUTHORIZATIONS.md` | **Merge carefully** — take updated base rules from template, keep your Learned Authorizations rows |
-| `.ai/memory/SESSION_LOG.md` | Take template instructions section only; **keep your log entries** |
 | `.ai/memory/TRACEABILITY.md` | Take template instructions section only; **keep your matrix rows** |
-| `.ai/memory/LEARNINGS.md` | Take template instructions section only; **keep your learnings** |
+| `.ai/memory/SESSION_LOG.md`, `.ai/memory/LEARNINGS.md` | **Do not re-adopt** — retired in this repo (assistant auto memory + PATTERNS.md replace them); skip these template files |
 | `.ai/config.yaml` | Merge — take structural changes, keep your project values |
 | `.ai/CONTEXT.md` | **Keep yours** — this is your project's context |
 | `.ai/architecture/PATTERNS.md` | Merge — take template improvements, keep your project patterns |

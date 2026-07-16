@@ -34,8 +34,6 @@ context:
   # Additional context files to include
   include:
     - ".ai/memory/AUTHORIZATIONS.md" # Read before every gated action
-    - ".ai/memory/SESSION_LOG.md"   # Read at session start for continuity
-    - ".ai/memory/LEARNINGS.md"     # Read at session start for project knowledge
     - ".ai/memory/TRACEABILITY.md"  # Read when starting implementation work
     - ".ai/architecture/PATTERNS.md"
     - "specs.config.yaml"

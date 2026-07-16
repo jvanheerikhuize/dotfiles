@@ -45,5 +45,4 @@ Use the next sequential TR-NNN ID. Fill in what you know; leave unknowns as `—
 ## Cross-References
 
 - Full decision rationale: [.ai/decisions/INDEX.md](../decisions/INDEX.md)
-- Session-by-session history: [SESSION_LOG.md](SESSION_LOG.md)
-- Accumulated knowledge: [LEARNINGS.md](LEARNINGS.md)
+- Accumulated patterns and gotchas: [.ai/architecture/PATTERNS.md](../architecture/PATTERNS.md)

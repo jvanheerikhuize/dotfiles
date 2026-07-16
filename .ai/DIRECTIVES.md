@@ -22,7 +22,7 @@
   2. **Require spec approval** - Do not implement new features unless the spec status is `approved` in specs.config.yaml.
 -->
 
-1. **Read LEARNINGS.md before touching existing code** — Before modifying any file in `src/`, read `.ai/memory/LEARNINGS.md` in full. It documents accumulated gotchas and hard-won patterns. Skipping this step risks re-introducing known bugs.
+1. **Follow the established patterns before touching existing code** — Before modifying any file in `src/`, consult `.ai/architecture/PATTERNS.md` (Claude Code loads the essentials automatically via `.claude/rules/`). It documents accumulated gotchas and hard-won patterns. Skipping this step risks re-introducing known bugs.
 2. **Update architecture docs before committing** — If your change adds, removes, or renames a component, entry point, function, or pattern, update `.ai/CONTEXT.md`, `.ai/architecture/ARCHITECTURE.md`, and `.ai/architecture/PATTERNS.md` **before** the commit. These files must reflect the current state of the repo, not a past state.
 3. **Create an ADR for every qualifying decision** — Whenever you make a decision that is architectural, a technology choice, security-relevant, hard to reverse, or cross-cutting, create an ADR using the template at `.ai/decisions/template.md` and register it in `.ai/decisions/INDEX.md` in the **same session** as the decision. Do not defer.
 
@@ -67,7 +67,6 @@ Before making **any** change, verify all of the following:
 
 - [ ] Confirm the spec `status` is `approved` in `specs.config.yaml` before writing any code
 - [ ] Read `.ai/CONTEXT.md` to confirm current project state
-- [ ] Read `.ai/memory/LEARNINGS.md` in full before modifying any existing file in `src/`
 - [ ] Check `.ai/decisions/INDEX.md` to understand past decisions before acting
 - [ ] Check `.ai/memory/TRACEABILITY.md` to see if related work already exists
 
@@ -79,7 +78,6 @@ Before making **any** change, verify all of the following:
 
 ### End-of-session checks
 
-- [ ] Append a new entry to `.ai/memory/SESSION_LOG.md`
 - [ ] Verify all TRACEABILITY.md rows for this session are complete (Request → Spec → Branch/PR → Status)
 
 ---
@@ -102,24 +100,21 @@ See [.ai/decisions/README.md](.ai/decisions/README.md) for the full trigger list
 
 ## 3b. Memory Maintenance (Required)
 
-The `.ai/memory/` directory is your persistent memory. You **MUST** maintain it as follows:
+The `.ai/memory/` directory holds the project's audit records. You **MUST** maintain it as follows:
 
-### At the start of every session
-1. Read [SESSION_LOG.md](.ai/memory/SESSION_LOG.md) — check the most recent entry for open items and recent state
-2. Read [LEARNINGS.md](.ai/memory/LEARNINGS.md) — absorb accumulated project knowledge before acting
-3. Read [TRACEABILITY.md](.ai/memory/TRACEABILITY.md) — check if related work exists before starting
+### At the start of a task
+- Read [TRACEABILITY.md](.ai/memory/TRACEABILITY.md) — check if related work exists before starting
 
 ### During a session
 - Append to [TRACEABILITY.md](.ai/memory/TRACEABILITY.md) as each link in the chain is established (do not batch at the end)
-- Append to [LEARNINGS.md](.ai/memory/LEARNINGS.md) whenever you discover something non-obvious
+- Record non-obvious gotchas where they belong: reusable code patterns go in `.ai/architecture/PATTERNS.md`; assistant-specific session context is handled by the assistant's own memory (Claude Code's built-in auto memory) — do not maintain a separate session log or learnings file here
 
 ### At the end of every session
-1. Append a new entry to [SESSION_LOG.md](.ai/memory/SESSION_LOG.md) using the template at the top of that file
-2. Verify TRACEABILITY.md rows are complete for all work done this session
+- Verify TRACEABILITY.md rows are complete for all work done this session
 
 See [.ai/memory/README.md](.ai/memory/README.md) for the full traceability chain and update triggers.
 
-**Do not skip memory updates.** They are the mechanism by which context survives across sessions.
+**Do not skip traceability updates.** They are the audit trail linking requests to specs to shipped code.
 
 ---
 
