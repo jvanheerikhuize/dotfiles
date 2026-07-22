@@ -280,6 +280,7 @@ bash tests/smoke/run-tests.sh
 - [architecture/](architecture/) — Technical architecture
 - [decisions/](decisions/) — Architecture Decision Records
 - [docs/runbooks/template-sync.md](../docs/runbooks/template-sync.md) — How to pull upstream template updates
+- [memory/AGENT.md](../memory/AGENT.md) — Agent-memory knowledge base (a separate concern from this `.ai/` governance system; see its README for the split)
 
 ---
 
