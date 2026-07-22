@@ -22,6 +22,15 @@ in `../scripts/` to search, audit, and visualize them.
 | `parametric/` | Parametric | Documentation-only. Records the boundary of what's assumed already known by any capable model, so entries aren't wasted restating it |
 | `prospective/` | Prospective | Future intentions, scheduled goals, things to do or check later |
 
+## Before ending a session
+
+Do not wait to be asked. If the session did real work (fixed a bug,
+resolved a non-trivial decision, hit a failure worth remembering), run the
+distillation procedure in `procedural/distill-session-into-memory.md`
+before considering the work done — a scaffolded-but-empty KB is a silent
+failure mode, not a neutral one (see `semantic/distillation-is-manual-not-automatic.md`).
+Trivial sessions (typo fixes, pure lookups) don't need an entry.
+
 ## Adding a memory
 
 1. Classify the information into one of the 7 types above.

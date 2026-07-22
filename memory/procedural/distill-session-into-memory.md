@@ -5,8 +5,8 @@ description: how an agent should turn a finished session into persisted memory
 confidence: high
 source: memory/working/distill.template.md
 created: 2026-07-22
-last_verified: 2026-07-22
-links: [kb-is-file-based]
+last_verified: 2026-07-23
+links: [kb-is-file-based, distillation-is-manual-not-automatic]
 ---
 
 1. Before ending a session, run through `memory/working/distill.template.md`.
