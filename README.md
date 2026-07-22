@@ -128,6 +128,15 @@ dotfiles/
     └── CONTEXT.md             # Start here for AI context
 ```
 
+`memory/` and `.ai/` cover different concerns and are meant to coexist rather
+than merge: `memory/` is a scaffolded copy of the
+[agent-memory knowledge base](https://github.com/jvanheerikhuize/knowledge-base)
+(an agent's own cross-session memory — facts, procedures, past episodes),
+while `.ai/` is this repo's own AI-assistant governance system (ADRs,
+authorizations, request-to-code traceability, architecture docs). See the
+knowledge base README's "Relationship to other AI-context systems" section
+for the reasoning behind the split.
+
 ## Profile YAML Format
 
 ```yaml
