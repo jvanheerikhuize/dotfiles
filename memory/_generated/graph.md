@@ -16,6 +16,7 @@ flowchart LR
     n_stale_graph_ci_failure_2026_07_22["stale-graph-ci-failure-2026-07-22<br/>(high)"]:::episodic
     n_distill_session_into_memory["distill-session-into-memory<br/>(high)"]:::procedural
     n_regenerate_graph_after_visualize_sync["regenerate-graph-after-visualize-sync<br/>(high)"]:::procedural
+    n_redesign_graph_to_represent_knowledge_not_just_links["redesign-graph-to-represent-knowledge-not-just-links<br/>(unverified)"]:::prospective
     n_distillation_is_manual_not_automatic --> n_distill_session_into_memory
     n_distillation_is_manual_not_automatic --> n_stale_graph_ci_failure_2026_07_22
     n_kb_is_file_based --> n_distill_session_into_memory
@@ -23,4 +24,5 @@ flowchart LR
     n_distill_session_into_memory --> n_kb_is_file_based
     n_distill_session_into_memory --> n_distillation_is_manual_not_automatic
     n_regenerate_graph_after_visualize_sync --> n_stale_graph_ci_failure_2026_07_22
+    n_redesign_graph_to_represent_knowledge_not_just_links --> n_distillation_is_manual_not_automatic
 ```
