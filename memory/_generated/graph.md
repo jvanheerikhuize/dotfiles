@@ -11,8 +11,16 @@ flowchart LR
     classDef retrieval fill:#00838f,color:#fff
     classDef parametric fill:#455a64,color:#fff
     classDef prospective fill:#ef6c00,color:#fff
+    n_distillation_is_manual_not_automatic["distillation-is-manual-not-automatic<br/>(high)"]:::semantic
     n_kb_is_file_based["kb-is-file-based<br/>(verified)"]:::semantic
+    n_stale_graph_ci_failure_2026_07_22["stale-graph-ci-failure-2026-07-22<br/>(high)"]:::episodic
     n_distill_session_into_memory["distill-session-into-memory<br/>(high)"]:::procedural
+    n_regenerate_graph_after_visualize_sync["regenerate-graph-after-visualize-sync<br/>(high)"]:::procedural
+    n_distillation_is_manual_not_automatic --> n_distill_session_into_memory
+    n_distillation_is_manual_not_automatic --> n_stale_graph_ci_failure_2026_07_22
     n_kb_is_file_based --> n_distill_session_into_memory
+    n_stale_graph_ci_failure_2026_07_22 --> n_regenerate_graph_after_visualize_sync
     n_distill_session_into_memory --> n_kb_is_file_based
+    n_distill_session_into_memory --> n_distillation_is_manual_not_automatic
+    n_regenerate_graph_after_visualize_sync --> n_stale_graph_ci_failure_2026_07_22
 ```
