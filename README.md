@@ -67,13 +67,28 @@ dotfiles/.vimrc       →  ~/.vimrc
 ## Flags
 
 ```
-./install.sh [--profile PROFILE] [--skip-dotfiles] [--dotfiles-only] [--force] [--help]
+./install.sh [--profile PROFILE] [--skip-dotfiles] [--dotfiles-only] [--force]
+             [--dry-run] [--validate-only] [--quiet] [--non-interactive] [--help]
 
   --profile PROFILE   Profile to apply (default: base)
   --skip-dotfiles     Install packages only, skip symlinks
   --dotfiles-only     Apply symlinks only, skip packages
   --force             Replace existing dotfiles (backs up to .bak)
+  --dry-run           Preview what would be installed/linked; make no changes
+  --validate-only     Validate profile YAML structure only; skip installs and dotfiles
+  --quiet             Suppress per-step log lines; summary is always shown
+  --non-interactive   Skip the git identity prompt; emit a warning instead
   --help              Show this message
+```
+
+`install.sh` also bootstraps a git identity (`~/.gitconfig.local`) and an
+ed25519 SSH keypair (`~/.ssh/id_ed25519`) after dotfiles/packages are applied.
+Both steps are idempotent (skipped if already configured) and can be run
+standalone:
+
+```bash
+src/setup-git-identity.sh [--non-interactive]
+src/setup-ssh.sh [--non-interactive]
 ```
 
 ## Repository Structure
@@ -90,11 +105,26 @@ dotfiles/
 ├── src/
 │   ├── utils.sh               # Logging, error handling, helpers
 │   ├── packages.sh            # Package install dispatcher
-│   └── dotfiles.sh            # Symlink management
+│   ├── dotfiles.sh            # Symlink management
+│   ├── validate.sh            # Profile YAML structure validation (sourced only)
+│   ├── setup-git-identity.sh  # Git identity bootstrap (standalone-runnable)
+│   └── setup-ssh.sh           # SSH keypair bootstrap (standalone-runnable)
+├── tests/
+│   └── smoke/                  # Docker-based smoke test suite (19 scenarios)
+│       ├── run-tests.sh       # Test runner — see Testing Playbooks below
+│       ├── Dockerfile
+│       ├── helpers.sh
+│       └── tests/              # One script per scenario
+├── memory/                      # File-based agent-memory knowledge base
+│   └── AGENT.md                # Start here for agent-memory context
+├── scripts/                     # Knowledge-base tooling (kb.py, visualize.py)
 ├── specs/                      # Feature specifications (spec-driven dev)
 │   └── features/
 │       └── FEAT-0001-core-provisioning-engine.yaml
-└── .ai/                        # AI assistant context
+├── .github/workflows/
+│   ├── smoke-tests.yml        # Runs tests/smoke/run-tests.sh on PR/push to main
+│   └── kb-lint.yml            # Lints memory/ knowledge base
+└── .ai/                         # AI assistant context
     └── CONTEXT.md             # Start here for AI context
 ```
 
@@ -129,10 +159,47 @@ See [specs/features/FEAT-0001-core-provisioning-engine.yaml](specs/features/FEAT
 2. Add the package to the appropriate profile YAML
 3. Test with `./install.sh --profile <profile>` on a clean machine or container
 
-### Running Tests
+### Testing Playbooks
+
+All tests run in Docker containers built from a clean `ubuntu:22.04` image —
+no host-machine side effects. Requires Docker.
+
+**Run the full smoke test suite** (what CI runs on every PR and push to `main`,
+see `.github/workflows/smoke-tests.yml`):
 
 ```bash
-# Smoke test in Docker (requires Docker)
+tests/smoke/run-tests.sh
+```
+
+**Iterate on a single profile during development** (reuses Docker layer
+cache for faster rebuilds; only runs scenarios tagged for that profile plus
+profile-agnostic ones):
+
+```bash
+tests/smoke/run-tests.sh --profile base --use-cache
+```
+
+**Add a new scenario:**
+
+1. Write `tests/smoke/tests/test-<name>.sh` — a self-contained script that
+   exits `0` on pass, non-zero on fail.
+2. Register it in `SCENARIO_DEFS` in `tests/smoke/run-tests.sh` as
+   `"<name>|<profile-or-all>|test-<name>.sh"`.
+3. Run `tests/smoke/run-tests.sh --profile <profile>` to confirm it passes
+   in isolation before running the full suite.
+
+**Debug a failing scenario** by running it directly against the built image
+instead of through the full suite:
+
+```bash
+docker build --tag dotfiles-smoke-test --file tests/smoke/Dockerfile .
+docker run --rm -it dotfiles-smoke-test bash /home/testuser/dotfiles/tests/smoke/tests/test-base-apt.sh
+```
+
+**Manual smoke test** without the test harness (useful for exploring behavior
+interactively):
+
+```bash
 docker run --rm -it ubuntu:22.04 bash -c "
   apt-get update && apt-get install -y git &&
   git clone <repo> ~/dotfiles &&
@@ -140,12 +207,20 @@ docker run --rm -it ubuntu:22.04 bash -c "
 "
 ```
 
+Scenario coverage includes: `--help`/unknown-profile argument handling,
+package installation (`base-apt`), dotfile symlinking and idempotency,
+`--dry-run` and `--validate-only` no-op guarantees, run summaries (full and
+partial-failure), and the git-identity/SSH-key bootstrap flows (fresh,
+idempotent, non-interactive, dry-run, and standalone-script invocation). Run
+`tests/smoke/run-tests.sh --help` for the full, current scenario list.
+
 ## Requirements
 
 - Ubuntu 22.04+
 - bash 5.x
 - git (to clone the repo — present after Stage 1)
 - internet connection (for package downloads)
+- Docker (only for running the smoke test suite under `tests/smoke/`)
 
 ## Author
 
