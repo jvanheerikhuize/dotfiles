@@ -1,0 +1,32 @@
+# Server profile — headless / SSH-accessible machines.
+# Extends base; adds server tooling. No GUI packages.
+profile:
+  name: server
+  extends: base
+
+packages:
+  apt:
+    # Remote access
+    - openssh-server
+
+    # Firewall
+    - ufw
+
+    # Brute-force protection
+    - fail2ban
+
+    # Network diagnostics
+    - nmap
+    - traceroute
+
+    # Disk usage
+    - ncdu
+
+    # Process / resource monitoring
+    - sysstat
+    - iotop
+
+  snap: []
+  flatpak: []
+  deb: []
+  custom: []

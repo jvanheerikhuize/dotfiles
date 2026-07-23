@@ -1,0 +1,60 @@
+# Base profile — applied to every machine regardless of role.
+# Contains essential CLI tools only. No GUI apps.
+profile:
+  name: base
+  extends: null
+
+packages:
+  apt:
+    # HTTP clients
+    - curl
+    - wget
+
+    # Version control
+    - git
+
+    # Editors
+    - vim
+
+    # System monitoring
+    - htop
+
+    # File utilities
+    - tree
+    - unzip
+    - zip
+    - rsync
+
+    # JSON / text processing
+    - jq
+
+    # Build tools
+    - build-essential
+
+    # Python
+    - python3-pip
+    - python3-venv
+
+    # apt infrastructure (for adding third-party repos in later specs)
+    - software-properties-common
+    - apt-transport-https
+    - ca-certificates
+    - gnupg
+
+    # Network utilities
+    - net-tools
+    - dnsutils
+
+    # SSH client (provides ssh, ssh-keygen, ssh-copy-id)
+    - openssh-client
+
+    # Terminal multiplexer
+    - tmux
+
+    # Shell linter
+    - shellcheck
+
+  snap: []
+  flatpak: []
+  deb: []
+  custom: []

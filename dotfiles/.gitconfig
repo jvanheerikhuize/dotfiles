@@ -1,0 +1,54 @@
+# ~/.gitconfig — global git configuration
+# Managed by dotfiles repo; symlinked into $HOME by install.sh.
+#
+# NOTE: user.name and user.email are intentionally absent.
+#       They are set per-machine by FEAT-0008 (identity management).
+
+[core]
+	# Use vim as the default editor for commit messages, rebases, etc.
+	editor = vim
+
+	# Automatically convert CRLF line endings to LF on commit (safe on Linux)
+	autocrlf = input
+
+[init]
+	# New repositories default to 'main' rather than 'master'
+	defaultBranch = main
+
+[color]
+	# Enable colour output in terminals that support it
+	ui = auto
+
+[pull]
+	# Keep merge commits when pulling (do not auto-rebase)
+	rebase = false
+
+[push]
+	# Automatically set upstream tracking branch on first push
+	autoSetupRemote = true
+
+[merge]
+	# Show a three-way diff in conflict markers (easier to resolve)
+	conflictstyle = diff3
+
+[diff]
+	# Histogram diff algorithm — better for most code
+	algorithm = histogram
+
+# ---------------------------------------------------------------------------
+# Aliases
+# ---------------------------------------------------------------------------
+[alias]
+	st  = status
+	co  = checkout
+	br  = branch
+	lg  = log --oneline --graph --decorate --all
+
+# ---------------------------------------------------------------------------
+# Local identity (FEAT-0008)
+# ---------------------------------------------------------------------------
+[include]
+	# Machine-local git identity: name and email set by src/setup-git-identity.sh.
+	# This file is NOT tracked in the repo and NOT symlinked — it lives only in $HOME.
+	# Silently ignored by git if the file does not yet exist (safe on fresh installs).
+	path = ~/.gitconfig.local

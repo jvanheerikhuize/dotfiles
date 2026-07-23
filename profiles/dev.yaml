@@ -1,0 +1,39 @@
+# Dev profile — full developer workstation.
+# Extends desktop (which extends base); adds language runtimes and dev tooling.
+# Heavier tools (Docker, VS Code, etc.) added via snap/flatpak in FEAT-0002.
+profile:
+  name: dev
+  extends: desktop
+
+packages:
+  apt:
+    # Python development headers
+    - python3-dev
+
+    # Node.js and npm (LTS from Ubuntu repos; pin to newer via apt repo in FEAT-0002)
+    - nodejs
+    - npm
+
+    # C / C++ extras
+    - gdb
+    - cmake
+    - pkg-config
+
+    # Container tools pre-reqs
+    - docker.io
+    - docker-compose
+
+    # Database clients
+    - postgresql-client
+    - sqlite3
+
+  snap:
+    - postman       # API testing
+
+  flatpak: []
+
+  deb:
+    - name: gh
+      url: https://github.com/cli/cli/releases/download/v2.67.0/gh_2.67.0_linux_amd64.deb
+
+  custom: []
