@@ -13,7 +13,7 @@ links: [stale-graph-ci-failure-2026-07-22]
    upstream knowledge-base repo (per its README's "Keeping a scaffolded
    copy in sync" section), run `python3 scripts/visualize.py` immediately
    afterward — even if no `memory/` entries changed.
-2. `git add memory/_generated/graph.md memory/_generated/graph.mmd` and
+2. `git add .kb/generated/graph.md .kb/generated/graph.mmd` and
    commit them in the same PR as the sync.
 3. This matters because `visualize.py`'s output *format* can change
    independently of the knowledge base's content (e.g. a mermaid label
