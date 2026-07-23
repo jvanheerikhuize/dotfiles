@@ -90,7 +90,7 @@ apply_dotfiles() {
   count=$(find "$dotfiles_dir" -not -name '.gitkeep' -type f | wc -l)
 
   if [[ "$count" -eq 0 ]]; then
-    log_info "No dotfiles to link (dotfiles/ is empty — populated in FEAT-0003)"
+    log_info "No dotfiles to link (dotfiles/ is empty)"
     return 0
   fi
 

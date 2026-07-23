@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Package installation dispatcher — apt, snap, flatpak, deb, custom (FEAT-0001/0002).
+# Package installation dispatcher — apt, snap, flatpak, deb, custom.
 # Source this file; do not execute directly.
 set -euo pipefail
 

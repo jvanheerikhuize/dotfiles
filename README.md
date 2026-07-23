@@ -55,9 +55,10 @@ Packages are declared in profile YAML and dispatched by type:
 Dotfiles live in `dotfiles/` and are symlinked into `$HOME`:
 
 ```
-dotfiles/.bashrc      →  ~/.bashrc
-dotfiles/.gitconfig   →  ~/.gitconfig
-dotfiles/.vimrc       →  ~/.vimrc
+dotfiles/.bashrc        →  ~/.bashrc
+dotfiles/.bash_aliases  →  ~/.bash_aliases
+dotfiles/.bash_profile  →  ~/.bash_profile
+dotfiles/.gitconfig     →  ~/.gitconfig
 ```
 
 - Existing symlinks pointing to the correct target are left untouched (idempotent)
@@ -96,46 +97,33 @@ src/setup-ssh.sh [--non-interactive]
 ```
 dotfiles/
 ├── install.sh                  # Main entrypoint
-├── profiles/
+├── profiles/                   # Declarative package manifests (YAML)
 │   ├── base.yaml              # Base profile
 │   ├── desktop.yaml           # Desktop profile (extends: base)
 │   ├── server.yaml            # Server profile (extends: base)
 │   └── dev.yaml               # Dev profile (extends: desktop)
 ├── dotfiles/                   # Config files to symlink into $HOME
-├── src/
-│   ├── utils.sh               # Logging, error handling, helpers
-│   ├── packages.sh            # Package install dispatcher
+│   ├── .bashrc
+│   ├── .bash_aliases
+│   ├── .bash_profile
+│   └── .gitconfig
+├── src/                        # Library scripts (sourced by install.sh)
+│   ├── utils.sh               # Logging, guards, YAML parsing helpers
+│   ├── validate.sh            # Profile YAML structure validation
+│   ├── packages.sh            # Package install dispatcher (apt/snap/flatpak/deb/custom)
 │   ├── dotfiles.sh            # Symlink management
-│   ├── validate.sh            # Profile YAML structure validation (sourced only)
 │   ├── setup-git-identity.sh  # Git identity bootstrap (standalone-runnable)
 │   └── setup-ssh.sh           # SSH keypair bootstrap (standalone-runnable)
-├── tests/
-│   └── smoke/                  # Docker-based smoke test suite (19 scenarios)
-│       ├── run-tests.sh       # Test runner — see Testing Playbooks below
-│       ├── Dockerfile
-│       ├── helpers.sh
-│       └── tests/              # One script per scenario
-├── memory/                      # File-based agent-memory knowledge base
-│   └── AGENT.md                # Start here for agent-memory context
-├── scripts/                     # Knowledge-base tooling (kb.py, visualize.py)
-├── specs/                      # Feature specifications (spec-driven dev)
-│   └── features/
-│       └── FEAT-0001-core-provisioning-engine.yaml
-├── .github/workflows/
-│   ├── smoke-tests.yml        # Runs tests/smoke/run-tests.sh on PR/push to main
-│   └── kb-lint.yml            # Lints memory/ knowledge base
-└── .ai/                         # AI assistant context
-    └── CONTEXT.md             # Start here for AI context
+├── README.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+└── LICENSE
 ```
 
-`memory/` and `.ai/` cover different concerns and are meant to coexist rather
-than merge: `memory/` is a scaffolded copy of the
-[agent-memory knowledge base](https://github.com/jvanheerikhuize/knowledge-base)
-(an agent's own cross-session memory — facts, procedures, past episodes),
-while `.ai/` is this repo's own AI-assistant governance system (ADRs,
-authorizations, request-to-code traceability, architecture docs). See the
-knowledge base README's "Relationship to other AI-context systems" section
-for the reasoning behind the split.
+The tree above is the whole repository — there is no build step, no runtime
+dependency beyond bash and `python3` (used only for YAML parsing, present by
+default on Ubuntu). `src/*.sh` are libraries: `install.sh` sources them, and
+`setup-git-identity.sh` / `setup-ssh.sh` can additionally be run on their own.
 
 ## Profile YAML Format
 
@@ -158,78 +146,83 @@ packages:
 
 ## Development
 
-This repo uses **Specification-Driven Development** — all changes to provisioning behaviour start with a spec in `specs/features/`.
+The repo is plain bash driven by declarative YAML — no build step and nothing to
+compile. See [CONTRIBUTING.md](CONTRIBUTING.md) for conventions.
 
-See [specs/features/FEAT-0001-core-provisioning-engine.yaml](specs/features/FEAT-0001-core-provisioning-engine.yaml) for the first feature spec and [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
+### Adding a package
 
-### Adding a Package
+1. Add the package under the right type (`apt`/`snap`/`flatpak`/`deb`/`custom`) in
+   the appropriate `profiles/*.yaml`. Put it in the most general profile that
+   should get it — `base` reaches every machine, `desktop`/`server`/`dev` narrow
+   it down.
+2. Preview the effect without touching the system:
+   ```bash
+   ./install.sh --profile <profile> --dry-run
+   ```
+3. Apply it: `./install.sh --profile <profile>`. Re-running is safe — every
+   install checks state first and skips what's already present.
 
-1. Write a spec if it's a new feature/profile change
-2. Add the package to the appropriate profile YAML
-3. Test with `./install.sh --profile <profile>` on a clean machine or container
+### Checking your changes
 
-### Testing Playbooks
-
-All tests run in Docker containers built from a clean `ubuntu:22.04` image —
-no host-machine side effects. Requires Docker.
-
-**Run the full smoke test suite** (what CI runs on every PR and push to `main`,
-see `.github/workflows/smoke-tests.yml`):
-
-```bash
-tests/smoke/run-tests.sh
-```
-
-**Iterate on a single profile during development** (reuses Docker layer
-cache for faster rebuilds; only runs scenarios tagged for that profile plus
-profile-agnostic ones):
+There is no test harness in the repo. Before committing:
 
 ```bash
-tests/smoke/run-tests.sh --profile base --use-cache
+bash -n install.sh src/*.sh                      # syntax-check every script
+shellcheck install.sh src/*.sh                   # static analysis (shellcheck is in base)
+./install.sh --profile <profile> --validate-only # validate profile YAML structure
+./install.sh --profile <profile> --dry-run       # preview the full run, no changes
 ```
 
-**Add a new scenario:**
-
-1. Write `tests/smoke/tests/test-<name>.sh` — a self-contained script that
-   exits `0` on pass, non-zero on fail.
-2. Register it in `SCENARIO_DEFS` in `tests/smoke/run-tests.sh` as
-   `"<name>|<profile-or-all>|test-<name>.sh"`.
-3. Run `tests/smoke/run-tests.sh --profile <profile>` to confirm it passes
-   in isolation before running the full suite.
-
-**Debug a failing scenario** by running it directly against the built image
-instead of through the full suite:
-
-```bash
-docker build --tag dotfiles-smoke-test --file tests/smoke/Dockerfile .
-docker run --rm -it dotfiles-smoke-test bash /home/testuser/dotfiles/tests/smoke/tests/test-base-apt.sh
-```
-
-**Manual smoke test** without the test harness (useful for exploring behavior
-interactively):
+To exercise a real run without risking your host, use a throwaway container:
 
 ```bash
 docker run --rm -it ubuntu:22.04 bash -c "
-  apt-get update && apt-get install -y git &&
-  git clone <repo> ~/dotfiles &&
-  cd ~/dotfiles && ./install.sh --profile base
+  apt-get update && apt-get install -y git sudo &&
+  useradd -m -s /bin/bash -G sudo tester && passwd -d tester &&
+  su - tester -c 'git clone <repo-url> ~/dotfiles && cd ~/dotfiles &&
+    ./install.sh --profile base --force --non-interactive'
 "
 ```
 
-Scenario coverage includes: `--help`/unknown-profile argument handling,
-package installation (`base-apt`), dotfile symlinking and idempotency,
-`--dry-run` and `--validate-only` no-op guarantees, run summaries (full and
-partial-failure), and the git-identity/SSH-key bootstrap flows (fresh,
-idempotent, non-interactive, dry-run, and standalone-script invocation). Run
-`tests/smoke/run-tests.sh --help` for the full, current scenario list.
+> `--force` is needed in a fresh container because `useradd -m` seeds `$HOME`
+> with `/etc/skel` copies (`.bashrc` etc.) that would otherwise block symlinking.
 
 ## Requirements
 
 - Ubuntu 22.04+
 - bash 5.x
+- python3 (YAML parsing — present by default on Ubuntu 22.04)
 - git (to clone the repo — present after Stage 1)
 - internet connection (for package downloads)
-- Docker (only for running the smoke test suite under `tests/smoke/`)
+
+## Roadmap
+
+The repo was recently slimmed down to its functional core. Planned next steps,
+roughly in priority order:
+
+**Safety net (do first)**
+- **CI on every push/PR** — a small GitHub Actions workflow running `bash -n` and
+  `shellcheck` on all scripts, plus `--validate-only` against each profile. Cheap,
+  no Docker required.
+- **A minimal smoke test** — one container run per profile (`--dry-run`, then a
+  real `--force --non-interactive` run) asserting exit 0 and idempotency on a
+  second run. Enough to catch regressions without rebuilding the old 19-scenario
+  suite.
+
+**Provisioning features**
+- **Connectivity pre-flight** — bail early with a clear message when there's no
+  network instead of failing mid-install.
+- **Log to a file** — tee the run to `~/.local/logs/dotfiles/` for post-mortems.
+- **`--status` / diff** — report which dotfiles are linked, drifted, or missing
+  without applying anything.
+- **Nerd Font install** and **GNOME/dconf settings** for the desktop profile.
+
+**Content & correctness**
+- **Exercise every package type** — `deb`, `custom`, `snap`, and `flatpak` are
+  supported by the dispatcher but only `apt`/`snap` appear in profiles today. Add
+  real entries (or document the intent) so the code paths are actually used.
+- **Pin third-party repos** — `nodejs`/`npm` and `docker.io` currently come from
+  Ubuntu's repos; add proper upstream apt sources for current versions.
 
 ## Author
 

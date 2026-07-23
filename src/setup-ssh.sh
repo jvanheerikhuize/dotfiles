@@ -6,7 +6,7 @@
 # permissions, writes a minimal ~/.ssh/config if none exists, then prints
 # the public key with instructions to add it to GitHub/GitLab.
 #
-# Called by install.sh after packages are installed (FEAT-0009).
+# Called by install.sh after packages are installed.
 # Can also be run standalone: src/setup-ssh.sh [--non-interactive]
 #
 # Environment variables (inherited from install.sh when sourced):

@@ -1,14 +1,8 @@
 # Contributing Guide
 
-This repository uses **Specification-Driven Development (SDD)** — all changes to provisioning behaviour start with a formal spec before any code is written.
-
-## Table of Contents
-
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Writing Specifications](#writing-specifications)
-- [Code Standards](#code-standards)
-- [Pull Request Process](#pull-request-process)
+This repo is plain bash driven by declarative YAML profiles — no build step, no
+framework, nothing to compile. Contributions are welcome; keep them small and
+focused.
 
 ## Getting Started
 
@@ -17,169 +11,93 @@ This repository uses **Specification-Driven Development (SDD)** — all changes 
 - Ubuntu 22.04+
 - bash 5.x
 - git
-- python3 (for YAML parsing — present by default on Ubuntu 22.04)
-- Docker (optional, for smoke testing)
+- python3 (YAML parsing — present by default on Ubuntu 22.04)
+- shellcheck (in the `base` profile; used for linting)
+- Docker (optional — for testing a real run in a throwaway container)
 
 ### Setup
 
 ```bash
 git clone <repo-url> ~/dotfiles
 cd ~/dotfiles
-./install.sh --profile base
+./install.sh --profile base --dry-run   # preview without changing anything
 ```
 
-## Development Workflow
+## Workflow
 
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Write Spec │ ──▶ │   Review    │ ──▶ │  Implement  │ ──▶ │   Merge     │
-│   (Draft)   │     │  (Approve)  │     │   (Code)    │     │    (PR)     │
-└─────────────┘     └─────────────┘     └─────────────┘     └─────────────┘
-```
+1. Branch off `main` — never commit to `main` directly.
+2. Make your change (see [Adding a package](#adding-a-package) below for the
+   common case).
+3. Check it (see [Verifying changes](#verifying-changes)).
+4. Open a pull request with a conventional-commit title.
 
-### 1. Propose a Change
+### Adding a package
 
-Before writing any shell scripts or modifying profile YAMLs, create a specification:
+Add it under the right type (`apt`/`snap`/`flatpak`/`deb`/`custom`) in the
+appropriate `profiles/*.yaml`. Put it in the most general profile that should
+receive it — `base` reaches every machine; `desktop`/`server`/`dev` narrow it
+down. No shell code is needed for a new package — the dispatcher reads the YAML.
 
-1. Copy `specs/features/_template.yaml` to `specs/features/FEAT-XXXX-your-feature.yaml`
-2. Fill out all required sections (metadata, description, acceptance_criteria)
-3. Submit a PR with only the spec for review
+### Adding a new behaviour
 
-### 2. Spec Review
+Behaviour lives in `src/*.sh`, sourced by `install.sh`. Follow the existing
+libraries as a template — they show the house style for guards, logging, and
+idempotency.
 
-- Acceptance criteria must be clear, specific, and testable
-- Technical requirements must be achievable in bash on Ubuntu 22.04
-- Once approved, `status` changes to `approved` in both the spec file and `specs.config.yaml`
+## Verifying changes
 
-### 3. Implementation
-
-Create a feature branch and implement all acceptance criteria:
+There is no test harness in the repo. Before opening a PR:
 
 ```bash
-git checkout -b spec/FEAT-XXXX
-# implement the spec
-# write/update tests
-git push -u origin spec/FEAT-XXXX
-# open PR
+bash -n install.sh src/*.sh                      # syntax-check every script
+shellcheck install.sh src/*.sh                   # static analysis
+./install.sh --profile <profile> --validate-only # validate profile YAML structure
+./install.sh --profile <profile> --dry-run       # preview the full run, no changes
 ```
 
-### 4. Code Review & Merge
+To exercise a real run without touching your host, use a throwaway container:
 
-- All acceptance criteria verified
-- Tests passing (smoke test in Docker at minimum)
-- Code follows patterns in `.ai/architecture/PATTERNS.md`
-- Spec status updated to `implemented` after merge
-
-## Writing Specifications
-
-Location: `specs/features/FEAT-XXXX-description.yaml`
-
-```yaml
-metadata:
-  id: "FEAT-0002"
-  title: "Multi-Type Package Support"
-  version: "1.0.0"
-  status: "draft"         # draft → review → approved → implemented
-  priority: "high"        # critical | high | medium | low
-
-description:
-  summary: "One or two sentence description."
-  problem_statement: "What problem does this solve?"
-  proposed_solution: "How does it solve the problem?"
-
-acceptance_criteria:
-  - id: "AC-001"
-    given: "A profile YAML with a snap package listed"
-    when: "./install.sh --profile base is run"
-    then: "The snap package is installed via snap install"
+```bash
+docker run --rm -it ubuntu:22.04 bash -c "
+  apt-get update && apt-get install -y git sudo &&
+  useradd -m -s /bin/bash -G sudo tester && passwd -d tester &&
+  su - tester -c 'git clone <repo-url> ~/dotfiles && cd ~/dotfiles &&
+    ./install.sh --profile base --force --non-interactive'
+"
 ```
 
-### Acceptance Criteria Guidelines
+`--force` is needed in a fresh container because `useradd -m` seeds `$HOME` with
+`/etc/skel` copies (`.bashrc` etc.) that would otherwise block symlinking.
 
-Write concrete, testable criteria. Good:
+## Code standards
 
-```yaml
-- id: "AC-001"
-  given: "A clean Ubuntu 22.04 system with profiles/base.yaml listing 'curl' under apt"
-  when: "./install.sh --profile base is run"
-  then: "curl is installed and 'curl --version' exits 0"
-```
+1. **`set -euo pipefail`** at the top of every script — no exceptions.
+2. **Named functions** — no logic at the top level of a library; keep the body a
+   thin dispatcher.
+3. **`local` variables** — don't mutate globals inside functions.
+4. **Idempotency** — check state before acting; a second run must be a safe no-op.
+5. **`log_info` / `log_warn` / `log_error`** from `src/utils.sh` — never bare `echo`
+   for status output.
+6. **Package lists live in YAML** — never hardcode packages in shell scripts.
+7. **No `[[ cond ]] && cmd` as a statement** under `set -e` — a false test returns
+   exit 1 and trips errexit. Use an `if` block instead.
 
-Bad (too vague):
-
-```yaml
-- id: "AC-001"
-  given: "A machine"
-  when: "Script runs"
-  then: "It works"
-```
-
-## Code Standards
-
-All code must follow `.ai/architecture/PATTERNS.md`. Key rules:
-
-1. **`set -euo pipefail`** in every script — no exceptions
-2. **Named functions** — no inline logic at the script body level
-3. **`local` variables** — never mutate globals inside functions
-4. **Idempotency** — check state before acting; safe to run twice
-5. **`log_info` / `log_warn` / `log_error`** — never bare `echo`
-6. **Package lists in YAML** — never hardcode packages in shell scripts
-
-### Commit Messages
+## Commit messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat(FEAT-0002): Add snap and flatpak package type support
-
-- Implement install_snap_package() in src/packages.sh
-- Implement install_flatpak_package() in src/packages.sh
-- Add snap/flatpak lists to profile YAML schema
-- Tests: AC-001 through AC-004
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+feat(packages): add flatpak dispatch to the installer
+fix(dotfiles): skip .gitkeep when linking
+docs: trim README to match the lean repo
 ```
 
-Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
+Types: `feat`, `fix`, `docs`, `refactor`, `chore`.
 
-### Branch Naming
+## Branch naming
 
 ```
-spec/FEAT-0002        # Feature implementation
-fix/dotfile-symlink   # Bug fixes
-docs/update-readme    # Documentation only
-```
-
-## Pull Request Process
-
-### For Specifications (spec PR)
-
-1. Create the spec YAML file
-2. Open PR with title: `spec(FEAT-XXXX): Your Feature Title`
-3. Request review — discussion happens on the PR
-
-### For Implementations (code PR)
-
-1. Reference the spec: `Implements: specs/features/FEAT-XXXX-...yaml`
-2. Include acceptance criteria checklist
-3. Confirm smoke test passes
-
-PR description template:
-
-```markdown
-## Specification
-Implements: `specs/features/FEAT-XXXX-description.yaml`
-
-## Acceptance Criteria
-- [ ] AC-001: Description
-- [ ] AC-002: Description
-
-## Testing
-- [ ] Smoke test: `docker run ... ./install.sh --profile base` passes
-- [ ] Idempotency: second run exits 0
-
-## Checklist
-- [ ] Follows patterns in .ai/architecture/PATTERNS.md
-- [ ] set -euo pipefail in all modified scripts
-- [ ] No hardcoded package lists in shell scripts
+feat/nerd-fonts       # new feature
+fix/dotfile-symlink   # bug fix
+docs/update-readme     # docs only
 ```

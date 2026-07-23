@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Profile YAML structure validation (FEAT-0006).
+# Profile YAML structure validation.
 # Source this file; do not execute directly.
 set -euo pipefail
 

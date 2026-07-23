@@ -1,6 +1,5 @@
 # Desktop profile — GUI workstation tools.
-# Extends base; adds graphical applications available via apt.
-# GUI apps better suited for snap/flatpak are added in FEAT-0002.
+# Extends base; adds graphical applications available via apt, snap, and flatpak.
 profile:
   name: desktop
   extends: base

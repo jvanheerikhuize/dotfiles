@@ -1,6 +1,5 @@
 # Dev profile — full developer workstation.
 # Extends desktop (which extends base); adds language runtimes and dev tooling.
-# Heavier tools (Docker, VS Code, etc.) added via snap/flatpak in FEAT-0002.
 profile:
   name: dev
   extends: desktop
@@ -10,7 +9,7 @@ packages:
     # Python development headers
     - python3-dev
 
-    # Node.js and npm (LTS from Ubuntu repos; pin to newer via apt repo in FEAT-0002)
+    # Node.js and npm (LTS from Ubuntu repos)
     - nodejs
     - npm
 

@@ -5,7 +5,7 @@
 # If not, prompts interactively and writes them to ~/.gitconfig.local, which
 # is picked up via [include] path = ~/.gitconfig.local in dotfiles/.gitconfig.
 #
-# Called by install.sh after dotfiles are linked (FEAT-0008).
+# Called by install.sh after dotfiles are linked.
 # Can also be run standalone: src/setup-git-identity.sh [--non-interactive]
 #
 # Environment variables (inherited from install.sh when sourced):

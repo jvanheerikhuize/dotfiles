@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(git commit:*)",
-      "Bash(bash -n:*)",
-      "Bash(bash tests/smoke/run-tests.sh:*)"
-    ]
-  }
-}
