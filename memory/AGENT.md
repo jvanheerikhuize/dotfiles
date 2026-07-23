@@ -35,7 +35,7 @@ Trivial sessions (typo fixes, pure lookups) don't need an entry.
 
 1. Classify the information into one of the 7 types above.
 2. Run `scripts/kb.py new --type <type> "<name>"` to scaffold an entry from
-   the template (see `templates/entry.template.md`).
+   the template (see `../.kb/templates/entry.template.md`).
 3. Fill in the body. Set `confidence` honestly (see rubric below).
 4. Link related entries via the `links:` frontmatter field.
 
@@ -52,7 +52,10 @@ Trivial sessions (typo fixes, pure lookups) don't need an entry.
 Re-run `scripts/kb.py lint` periodically (or via CI, see
 `.github/workflows/kb-lint.yml`) — it flags entries whose `last_verified`
 is stale, `confidence: unverified` entries older than 30 days, dangling
-`links:`, and duplicate slugs with conflicting content.
+`links:`, duplicate slugs, and violations of `../.kb/schema/entry.schema.json`
+(missing required fields, malformed `name`, invalid `type`). It does not
+detect content-level contradictions between entries — no such checker
+exists yet.
 
 ## Interacting with the knowledge base
 
@@ -61,22 +64,23 @@ scripts/kb.py list [--type TYPE]         # list entries, optionally filtered
 scripts/kb.py search "<query>"           # keyword search across all entries
 scripts/kb.py show <name>                # print one entry
 scripts/kb.py new --type TYPE "<name>"   # scaffold a new entry
-scripts/kb.py lint                       # fact-check / staleness / contradiction pass
+scripts/kb.py lint                       # schema, duplicate-slug, dangling-link, and staleness checks
 ```
 
 ## Visualizing the knowledge base
 
 ```
-scripts/visualize.py    # regenerates memory/_generated/graph.{mmd,md}
+scripts/visualize.py    # regenerates .kb/generated/graph.{mmd,md}
 ```
 
 `graph.mmd` is the raw Mermaid source, for IDEs and tools that read `.mmd`
 directly. GitHub does not render standalone `.mmd` files — view
-`_generated/graph.md` instead, which wraps the same diagram in a
+`../.kb/generated/graph.md` instead, which wraps the same diagram in a
 ` ```mermaid ` fence that GitHub (and Claude artifacts) render inline.
 
 ## Further reading
 
-- `../docs/plan.md` — why this structure, requirements traceability
-- `../docs/solution-overview.md` — architecture diagrams
-- `../docs/roadmap.md` — what's built vs. planned
+The machinery (`scripts/`, `../.kb/templates`, `../.kb/schema`) is scaffolded
+from the upstream knowledge-base repo — see its `README.md` for the design
+rationale, architecture diagrams, and full layout. Everything under `memory/`
+and `../.kb/generated/` is this repo's own data.

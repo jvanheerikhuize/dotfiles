@@ -15,7 +15,7 @@ way. After merging, `kb-lint.yml` failed on both the PR check and the
 merge-triggered push, at the "Fail if generated graph is out of date" step.
 
 Root cause: the synced `visualize.py` now emits `<br/>` instead of `\n` for
-mermaid label line breaks. The committed `memory/_generated/graph.md` and
+mermaid label line breaks. The committed `.kb/generated/graph.md` and
 `graph.mmd` still had the old `\n` output, so CI's diff check
 (`git diff --exit-code` against freshly generated output) failed — even
 though nothing in `memory/`'s actual content had changed.

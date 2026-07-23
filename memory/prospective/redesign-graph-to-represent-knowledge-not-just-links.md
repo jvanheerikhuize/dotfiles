@@ -1,7 +1,7 @@
 ---
 name: redesign-graph-to-represent-knowledge-not-just-links
 type: prospective
-description: redesign memory/_generated/graph so it represents the consuming repo's actual knowledge, not just which entries link to which
+description: redesign .kb/generated/graph so it represents the consuming repo's actual knowledge, not just which entries link to which
 confidence: unverified
 source: user request, 2026-07-23 — after reviewing PR #18's distillation entries
 created: 2026-07-23
