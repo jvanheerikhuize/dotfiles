@@ -234,3 +234,9 @@ idempotent, non-interactive, dry-run, and standalone-script invocation). Run
 ## Author
 
 Jerry van Heerikhuize — [@jvanheerikhuize](https://github.com/jvanheerikhuize)
+
+## Roadmap
+
+See [branch: cleanup-roadmap](https://github.com/jvanheerikhuize/dotfiles/tree/cleanup-roadmap) for profile inheritance work and PROFILES.md matrix.
+
+---
