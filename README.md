@@ -2,7 +2,7 @@
 
 Stage 2 of a three-stage laptop rebuild: turns a clean Ubuntu install into a working machine. Installs packages from declarative YAML profiles and symlinks dotfiles into `$HOME`. Idempotent; safe to re-run.
 
-Stage 1 is [Autoinstall-YAML](https://github.com/jvanheerikhuize/Autoinstall-YAML) (the OS), stage 3 is [agentic-workspace](https://github.com/jvanheerikhuize/agentic-workspace) (agent tooling). The split and the rebuild runbook are in Autoinstall-YAML's `docs/stateless-laptop-plan.md`.
+Stage 1 is [Autoinstall-YAML](https://github.com/jvanheerikhuize/Autoinstall-YAML) (the OS), stage 3 is [agentic-workspace](https://github.com/jvanheerikhuize/agentic-workspace) (agent tooling). The split and the rebuild runbook are in Autoinstall-YAML's `PLAN.md`.
 
 ## Usage
 
