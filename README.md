@@ -1,34 +1,41 @@
 # dotfiles
 
-Ubuntu provisioning system — installs packages and applies dotfiles on fresh installs via declarative YAML.
+Stage 2 of a three-stage laptop rebuild: turns a clean Ubuntu install into a working machine. Installs packages from declarative YAML profiles and symlinks dotfiles into `$HOME`. Idempotent; safe to re-run.
 
-## Features
-
-- Declarative YAML-based configuration
-- Profile dispatch for different machine types
-- Idempotent provisioning (safe to run multiple times)
-- Version-controlled package lists and dotfiles
-- No external dependencies beyond standard Ubuntu packages
+Stage 1 is [Autoinstall-YAML](https://github.com/jvanheerikhuize/Autoinstall-YAML) (the OS), stage 3 is [agentic-workspace](https://github.com/jvanheerikhuize/agentic-workspace) (agent tooling). The split and the rebuild runbook are in Autoinstall-YAML's `docs/stateless-laptop-plan.md`.
 
 ## Usage
 
 ```bash
-./provision.sh [profile]
+git clone https://github.com/jvanheerikhuize/dotfiles.git ~/.dotfiles
+~/.dotfiles/install.sh --profile dev
 ```
 
-Profiles: `workstation`, `minimal`, `server`
+Options: `--profile PROFILE`, `--skip-dotfiles`, `--dotfiles-only`, `--force`, `--dry-run`, `--validate-only`, `--quiet`, `--non-interactive`.
+
+Profiles extend each other: `base` (CLI only) → `desktop` (GUI) → `dev` (toolchains). `server` extends `base`.
 
 ## Files
 
-- `packages/` — declarative package lists per profile
-- `dotfiles/` — dot configuration files (bash, git, vim, etc.)
-- `provision.sh` — main provisioning script
-- `.gitlab-ci.yml` — automated testing on fresh images
+```text
+├── install.sh            # Entry point
+├── profiles/             # base.yaml, desktop.yaml, dev.yaml, server.yaml
+├── dotfiles/             # .bashrc, .bash_aliases, .bash_profile, .gitconfig (symlinked into $HOME)
+├── src/                  # packages.sh (apt, snap, flatpak, deb, custom), dotfiles.sh, validate.sh, setup-git-identity.sh, setup-ssh.sh, utils.sh
+└── docs/
+    └── TRIAGE.md         # What the reference machine has that the profiles do not; tick to adopt
+```
 
-## Roadmap
+## Checks before a PR
 
-See [ROADMAP.md](ROADMAP.md) for next priorities.
+```bash
+shellcheck install.sh src/*.sh
+./install.sh --profile dev --validate-only
+```
 
-## Contributing
+## Rules
 
-Submit changes via merge request. All changes must pass the fresh-image test in CI.
+1. Declarative only: packages go in a profile, not in a script.
+2. No secrets in the repo. Git identity and SSH keys are set per machine by `src/setup-git-identity.sh` and `src/setup-ssh.sh`.
+3. GUI apps are Flatpak-first (decision 2026-11-16). Vendor apt repos only where Flatpak is the wrong fit (VS Code, VirtualBox).
+4. Anything that must exist before first login belongs to stage 1, not here.
