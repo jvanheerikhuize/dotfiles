@@ -1,0 +1,196 @@
+# Alacritty config — Tokyo Night theme, enhanced
+# Compatible with Alacritty 0.15+ (tested against options current as of 0.17)
+
+[env]
+# xterm-256color is the safe choice for SSH into machines without alacritty terminfo.
+# If you rarely SSH (or install terminfo on your servers), switch to "alacritty"
+# for slightly better feature advertisement (e.g. proper undercurl support).
+TERM = "xterm-256color"
+
+[general]
+live_config_reload = true
+# Optional: split your theme into its own file and import it here, e.g.:
+# import = ["~/.config/alacritty/themes/tokyo-night.toml"]
+
+[window]
+dimensions = { columns = 110, lines = 30 }
+padding = { x = 12, y = 12 }
+# Spreads padding evenly if the window size isn't an exact multiple of the cell size
+dynamic_padding = true
+opacity = 0.92
+blur = true
+decorations = "Full"
+decorations_theme_variant = "Dark"
+dynamic_title = true
+# Resize the window in cell-sized steps instead of pixel-by-pixel (X11/Wayland/macOS)
+resize_increments = true
+# Other options you may want:
+# startup_mode = "Maximized"        # or "Fullscreen"
+# level = "AlwaysOnTop"             # keep Alacritty above other windows (0.15+)
+
+[scrolling]
+history = 50000
+multiplier = 3
+
+[font]
+size = 12.0
+normal = { family = "JetBrainsMono Nerd Font", style = "Regular" }
+bold = { family = "JetBrainsMono Nerd Font", style = "Bold" }
+italic = { family = "JetBrainsMono Nerd Font", style = "Italic" }
+bold_italic = { family = "JetBrainsMono Nerd Font", style = "Bold Italic" }
+offset = { x = 0, y = 1 }
+# Nudge glyphs down half the extra line spacing so text stays vertically centered
+glyph_offset = { x = 0, y = 0 }
+# Use Alacritty's crisp built-in glyphs for box-drawing/powerline characters
+builtin_box_drawing = true
+
+[cursor]
+style = { shape = "Beam", blinking = "On" }
+vi_mode_style = { shape = "Block", blinking = "Off" }
+# Show a hollow outline cursor when the window loses focus
+unfocused_hollow = true
+# Beam/underline cursor thickness as a fraction of cell width
+thickness = 0.15
+# Blink timing: interval in ms, and stop blinking after N seconds of inactivity (0 = never stop)
+blink_interval = 500
+blink_timeout = 10
+
+[terminal]
+# Allow programs (tmux, nvim, ssh sessions) to write to your clipboard via OSC 52.
+# Hugely useful for copying text out of remote sessions.
+osc52 = "CopyPaste"
+
+[mouse]
+hide_when_typing = true
+
+[selection]
+save_to_clipboard = true
+semantic_escape_chars = ",│`|:\"' ()[]{}<>\t"
+
+[bell]
+# Subtle visual flash instead of an audible beep
+animation = "EaseOutQuart"
+duration = 100
+color = "#414868"
+# Or run a command on bell (e.g. a desktop notification):
+# command = { program = "notify-send", args = ["Terminal bell"] }
+
+# ── Hints: make URLs (and more) clickable / keyboard-selectable ──────────────
+[hints]
+# Vim-style home-row labels for keyboard hint selection
+alphabet = "jfkdls;ahgurieowpq"
+
+[[hints.enabled]]
+# Match URLs; click with Ctrl, or press Ctrl+Shift+O to pick one via keyboard
+regex = "(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https://|http://|news:|file:|git://|ssh:|ftp://)[^\u0000-\u001F\u007F-\u009F<>\"\\s{-}\\^⟨⟩`\\\\]+"
+hyperlinks = true
+post_processing = true
+persist = false
+command = "xdg-open"   # macOS: "open" — Windows: { program = "cmd", args = ["/c", "start", ""] }
+binding = { key = "O", mods = "Control|Shift" }
+mouse = { enabled = true, mods = "Control" }
+
+# ── Tokyo Night colors ───────────────────────────────────────────────────────
+[colors]
+draw_bold_text_with_bright_colors = false
+
+[colors.primary]
+background = "#1a1b26"
+foreground = "#a9b1d6"
+
+[colors.cursor]
+text = "#1a1b26"
+cursor = "#c0caf5"
+
+[colors.vi_mode_cursor]
+text = "#1a1b26"
+cursor = "#bb9af7"
+
+[colors.selection]
+text = "CellForeground"
+background = "#283457"
+
+[colors.search.matches]
+foreground = "#1a1b26"
+background = "#3d59a1"
+
+[colors.search.focused_match]
+foreground = "#1a1b26"
+background = "#ff9e64"
+
+[colors.hints.start]
+foreground = "#1a1b26"
+background = "#e0af68"
+
+[colors.hints.end]
+foreground = "#1a1b26"
+background = "#a9b1d6"
+
+[colors.footer_bar]
+foreground = "#a9b1d6"
+background = "#283457"
+
+[colors.normal]
+black   = "#32344a"
+red     = "#f7768e"
+green   = "#9ece6a"
+yellow  = "#e0af68"
+blue    = "#7aa2f7"
+magenta = "#bb9af7"
+cyan    = "#7dcfff"
+white   = "#a9b1d6"
+
+[colors.bright]
+black   = "#444b6a"
+red     = "#ff7a93"
+green   = "#b9f27c"
+yellow  = "#ff9e64"
+blue    = "#7da6ff"
+magenta = "#bb9af7"
+cyan    = "#0db9d7"
+white   = "#acb0d0"
+
+# Extended palette some TUI apps use (colors 16/17 in Tokyo Night)
+[[colors.indexed_colors]]
+index = 16
+color = "#ff9e64"
+
+[[colors.indexed_colors]]
+index = 17
+color = "#db4b4b"
+
+# ── Keybindings ──────────────────────────────────────────────────────────────
+[keyboard]
+bindings = [
+  # New window / instance
+  { key = "N", mods = "Control|Shift", action = "SpawnNewInstance" },
+
+  # Copy / paste
+  { key = "C", mods = "Control|Shift", action = "Copy" },
+  { key = "V", mods = "Control|Shift", action = "Paste" },
+
+  # Search scrollback
+  { key = "F", mods = "Control|Shift", action = "SearchForward" },
+  { key = "B", mods = "Control|Shift", action = "SearchBackward" },
+
+  # Fullscreen
+  { key = "F11", action = "ToggleFullscreen" },
+
+  # Font size on the fly
+  { key = "Equals", mods = "Control", action = "IncreaseFontSize" },
+  { key = "Minus",  mods = "Control", action = "DecreaseFontSize" },
+  { key = "Key0",   mods = "Control", action = "ResetFontSize" },
+
+  # Vi mode: navigate/select scrollback with vim keys (v to select, y to yank)
+  { key = "Space", mods = "Control|Shift", action = "ToggleViMode" },
+
+  # Clear scrollback + screen
+  { key = "L", mods = "Control|Shift", action = "ClearHistory" },
+  { key = "L", mods = "Control|Shift", chars = "\u000c" },
+
+  # Jump through scrollback
+  { key = "PageUp",   mods = "Shift", action = "ScrollPageUp" },
+  { key = "PageDown", mods = "Shift", action = "ScrollPageDown" },
+  { key = "Home",     mods = "Shift", action = "ScrollToTop" },
+  { key = "End",      mods = "Shift", action = "ScrollToBottom" },
+]

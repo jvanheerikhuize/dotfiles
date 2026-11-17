@@ -35,7 +35,7 @@ install_apt_package() {
   fi
 
   log_info "Installing (apt): ${pkg}"
-  if ! sudo apt-get install -y "$pkg" 2>&1; then
+  if ! sudo DEBIAN_FRONTEND=noninteractive apt-get install -y "$pkg" 2>&1; then
     log_error "apt-get failed for package: ${pkg}"
   fi
   INSTALLED_PACKAGES+=("${pkg}")

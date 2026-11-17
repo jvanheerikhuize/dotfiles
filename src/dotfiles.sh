@@ -101,3 +101,34 @@ apply_dotfiles() {
     link_dotfile "$file" "$dest" "$force"
   done < <(find "$dotfiles_dir" -not -name '.gitkeep' -type f -print0)
 }
+
+# ---------------------------------------------------------------------------
+# apply_gnome_settings <dconf_ini>
+#
+# Loads GNOME settings (dock, tiling, theme) with `dconf load /`.
+# Skips quietly when the file is missing or dconf is not available.
+# ---------------------------------------------------------------------------
+apply_gnome_settings() {
+  local ini="$1"
+
+  if [[ ! -f "$ini" ]]; then
+    return 0
+  fi
+  if ! command -v dconf &>/dev/null; then
+    log_warn "dconf not found — skipping GNOME settings"
+    return 0
+  fi
+
+  log_step "Applying GNOME settings"
+  if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    log_dry_run "Would load GNOME settings from ${ini}"
+    return 0
+  fi
+
+  if dconf load / < "$ini"; then
+    log_info "Loaded GNOME settings from ${ini}"
+  else
+    log_warn "dconf load failed for ${ini} (no graphical session?)"
+    WARNINGS+=("GNOME settings not applied — run: dconf load / < ${ini}")
+  fi
+}

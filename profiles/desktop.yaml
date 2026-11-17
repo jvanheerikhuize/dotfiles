@@ -1,5 +1,6 @@
 # Desktop profile — GUI workstation tools.
-# Extends base; adds graphical applications available via apt, snap, and flatpak.
+# Extends base; adds graphical applications. GUI apps are Flatpak-first
+# (decision 2026-11-16); apt only where the app needs system integration.
 profile:
   name: desktop
   extends: base
@@ -9,9 +10,18 @@ packages:
     # GNOME customisation
     - gnome-tweaks
     - dconf-editor
+    - gnome-shell-extension-manager
 
-    # Media
-    - vlc
+    # Terminal
+    - alacritty
+
+    # Clipboard from the command line
+    - xclip
+
+    # Audio and video
+    - pavucontrol
+    - ffmpeg
+    - handbrake-cli
 
     # Fonts
     - fonts-firacode
@@ -19,12 +29,34 @@ packages:
     # Disk management
     - gparted
 
-  snap:
-    - code          # VS Code
-    - spotify
+    # FTP and installers
+    - gftp
+    - curlftpfs
+    - innoextract
 
-  flatpak: []
+    # Needed to run AppImages (ElegooSlicer below)
+    - libfuse2t64
+
+  snap: []
+
+  flatpak:
+    - com.google.Chrome
+    - org.signal.Signal
+    - org.videolan.VLC
+    - org.inkscape.Inkscape
+    - org.kde.krita
+    - org.libreoffice.LibreOffice
+    - com.spotify.Client
+    - com.transmissionbt.Transmission
+    - org.gnome.Cheese
+    - org.raspberrypi.rpi-imager
 
   deb: []
 
-  custom: []
+  custom:
+    - cmd: >-
+        mkdir -p "$HOME/.local/bin" &&
+        curl -fL -o "$HOME/.local/bin/ElegooSlicer.AppImage"
+        https://github.com/elegooofficial/ElegooSlicer/releases/download/v1.5.3.5/ElegooSlicer_Linux_V1.5.3.5.AppImage &&
+        chmod +x "$HOME/.local/bin/ElegooSlicer.AppImage"
+      idempotency_check: test -x "$HOME/.local/bin/ElegooSlicer.AppImage"

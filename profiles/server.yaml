@@ -19,8 +19,6 @@ packages:
     - nmap
     - traceroute
 
-    # Disk usage
-    - ncdu
 
     # Process / resource monitoring
     - sysstat

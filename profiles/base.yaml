@@ -25,6 +25,24 @@ packages:
     - zip
     - rsync
 
+    # Nicer everyday CLI (triage 2026-11-17)
+    - bat           # cat with highlighting; the command is `batcat` on Ubuntu
+    - eza           # modern ls
+    - fzf           # fuzzy finder
+
+    # Disk usage
+    - duf
+    - ncdu
+
+    # Hardware health (triage 2026-11-17)
+    - nvme-cli
+    - smartmontools
+    - lm-sensors
+    - powertop
+
+    # Cloud storage sync (personal-data stage depends on it)
+    - rclone
+
     # JSON / text processing
     - jq
 

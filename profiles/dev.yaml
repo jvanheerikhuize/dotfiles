@@ -9,14 +9,29 @@ packages:
     # Python development headers
     - python3-dev
 
-    # Node.js and npm (LTS from Ubuntu repos)
+    # Node.js 22, npm and corepack (pnpm, yarn) from Ubuntu repos
     - nodejs
     - npm
+    - node-corepack
+
+    # Go (1.26 in Ubuntu 26.04)
+    - golang-go
 
     # C / C++ extras
     - gdb
     - cmake
     - pkg-config
+
+    # Git history rewriting
+    - git-filter-repo
+
+    # Network analysis
+    - nmap
+    - tshark
+
+    # Virtual machines (Ubuntu build; Oracle's DKMS module fails on kernel 7.0)
+    - virtualbox
+    - virtualbox-dkms
 
     # Container tools pre-reqs
     - docker.io
@@ -31,8 +46,27 @@ packages:
 
   flatpak: []
 
-  deb:
-    - name: gh
-      url: https://github.com/cli/cli/releases/download/v2.67.0/gh_2.67.0_linux_amd64.deb
+  # gh is installed by stage 1 (Autoinstall-YAML) from the Ubuntu archive.
+  deb: []
 
-  custom: []
+  custom:
+    # VS Code from Microsoft's apt repository (stays apt, decision 2026-11-16)
+    - cmd: >-
+        sudo install -d -m 0755 /etc/apt/keyrings &&
+        curl -fsSL https://packages.microsoft.com/keys/microsoft.asc
+        | sudo gpg --dearmor --yes -o /etc/apt/keyrings/microsoft.gpg &&
+        echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.gpg] https://packages.microsoft.com/repos/code stable main"
+        | sudo tee /etc/apt/sources.list.d/vscode.list >/dev/null &&
+        sudo apt-get update &&
+        sudo apt-get install -y code
+      idempotency_check: dpkg -s code
+
+    # uv: Python package, venv and tool manager
+    - cmd: curl -LsSf https://astral.sh/uv/install.sh | sh
+      idempotency_check: test -x "$HOME/.local/bin/uv"
+
+    # pnpm and yarn shims through corepack, in the user's bin
+    - cmd: >-
+        mkdir -p "$HOME/.local/bin" &&
+        corepack enable --install-directory "$HOME/.local/bin" pnpm yarn
+      idempotency_check: test -e "$HOME/.local/bin/pnpm"

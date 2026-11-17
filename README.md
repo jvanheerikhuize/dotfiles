@@ -20,10 +20,12 @@ Profiles extend each other: `base` (CLI only) → `desktop` (GUI) → `dev` (too
 ```text
 ├── install.sh            # Entry point
 ├── profiles/             # base.yaml, desktop.yaml, dev.yaml, server.yaml
-├── dotfiles/             # .bashrc, .bash_aliases, .bash_profile, .gitconfig (symlinked into $HOME)
+├── dotfiles/             # .bashrc, .bash_aliases, .bash_profile, .gitconfig, .config/alacritty/ (symlinked into $HOME)
+├── gnome/
+│   └── dconf.ini         # Dock, tiling, theme; loaded with `dconf load /` for profiles that include desktop
 ├── src/                  # packages.sh (apt, snap, flatpak, deb, custom), dotfiles.sh, validate.sh, setup-git-identity.sh, setup-ssh.sh, utils.sh
 └── docs/
-    └── TRIAGE.md         # What the reference machine has that the profiles do not; tick to adopt
+    └── TRIAGE.md         # What the reference machine has and where each adopted item now lives
 ```
 
 ## Checks before a PR
@@ -38,4 +40,5 @@ shellcheck install.sh src/*.sh
 1. Declarative only: packages go in a profile, not in a script.
 2. No secrets in the repo. Git identity and SSH keys are set per machine by `src/setup-git-identity.sh` and `src/setup-ssh.sh`.
 3. GUI apps are Flatpak-first (decision 2026-11-16). Vendor apt repos only where Flatpak is the wrong fit (VS Code, VirtualBox).
-4. Anything that must exist before first login belongs to stage 1, not here.
+4. The shell is plain bash; starship was dropped on 2026-11-17.
+5. Anything that must exist before first login belongs to stage 1, not here.
