@@ -11,6 +11,8 @@ packages:
     - gnome-tweaks
     - dconf-editor
     - gnome-shell-extension-manager
+    # Firewall GUI for ufw (ufw itself is enabled by stage 1)
+    - gufw
 
     # Terminal
     - alacritty
