@@ -123,7 +123,7 @@ _ensure_flatpak() {
       return 0
     fi
     log_info "flatpak not found — installing via apt"
-    sudo apt-get install -y flatpak
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y flatpak
   fi
 
   if ! flatpak remotes 2>/dev/null | grep -q flathub; then
@@ -132,7 +132,9 @@ _ensure_flatpak() {
       return 0
     fi
     log_info "Adding flathub remote"
-    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    # System-wide remote needs root; without sudo, polkit refuses it in a
+    # non-graphical or non-interactive session.
+    sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
   fi
 }
 
@@ -158,7 +160,7 @@ install_flatpak_package() {
   fi
 
   log_info "Installing (flatpak): ${id}"
-  if ! flatpak install -y flathub "$id"; then
+  if ! sudo flatpak install -y --noninteractive --system flathub "$id"; then
     log_error "flatpak install failed: ${id}"
   fi
   INSTALLED_PACKAGES+=("${id}")
