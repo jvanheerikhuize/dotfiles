@@ -35,7 +35,7 @@ packages:
 
     # Container tools pre-reqs
     - docker.io
-    - docker-compose
+    - docker-compose-v2      # "docker compose"; docker-compose is a transitional name
 
     # Database clients
     - postgresql-client
@@ -62,7 +62,7 @@ packages:
       idempotency_check: dpkg -s code
 
     # uv: Python package, venv and tool manager
-    - cmd: curl -LsSf https://astral.sh/uv/install.sh | sh
+    - cmd: curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh   # .bashrc owns PATH
       idempotency_check: test -x "$HOME/.local/bin/uv"
 
     # pnpm and yarn shims through corepack, in the user's bin

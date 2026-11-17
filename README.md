@@ -35,6 +35,24 @@ shellcheck install.sh src/*.sh
 ./install.sh --profile dev --validate-only
 ```
 
+## Verification record
+
+Last run: 2026-11-17, `--profile dev --non-interactive` on a fresh Ubuntu 26.04.1 VM installed by
+Autoinstall-YAML (stage 1), driven over SSH.
+
+| Check | Result |
+| :--- | :--- |
+| 63 apt packages, postman snap, 10 Flatpaks, 4 custom steps | pass |
+| Dotfiles linked, including a fresh `~/.bashrc` from `/etc/skel` | pass |
+| GNOME settings (`dconf read` of color scheme and dock position) | pass |
+| `uv`, `pnpm`, `go` on PATH in an interactive shell | pass |
+| Second run installs nothing (idempotent), 13 s | pass |
+| Git identity | skipped with a warning, as designed for `--non-interactive` |
+
+Fixes found by this run: Flatpak remote and installs need `sudo`; untouched `/etc/skel` files are
+replaced; uv no longer edits `.bashrc`; `docker-compose-v2`, `bind9-dnsutils` and `org.gnome.Snapshot`
+replace names that never report as installed.
+
 ## Rules
 
 1. Declarative only: packages go in a profile, not in a script.

@@ -61,7 +61,7 @@ packages:
 
     # Network utilities
     - net-tools
-    - dnsutils
+    - bind9-dnsutils          # dig, nslookup; dnsutils is only a virtual name
 
     # SSH client (provides ssh, ssh-keygen, ssh-copy-id)
     - openssh-client
