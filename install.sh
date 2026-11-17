@@ -10,6 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _INSTALL_ROOT="${SCRIPT_DIR}"
 PROFILES_DIR="${_INSTALL_ROOT}/profiles"
 DOTFILES_DIR="${_INSTALL_ROOT}/dotfiles"
+GNOME_SETTINGS="${_INSTALL_ROOT}/gnome/dconf.ini"
 
 source "${_INSTALL_ROOT}/src/utils.sh"
 source "${_INSTALL_ROOT}/src/validate.sh"
@@ -380,6 +381,9 @@ main() {
     apply_dotfiles "$DOTFILES_DIR" "$HOME" "$FORCE"
     setup_git_identity
     setup_ssh_key
+    if [[ " ${PROFILE_CHAIN[*]} " == *" desktop "* ]]; then
+      apply_gnome_settings "$GNOME_SETTINGS"
+    fi
   else
     log_info "Skipping dotfiles (--skip-dotfiles)"
   fi
