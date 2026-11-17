@@ -19,6 +19,8 @@ fi
 #   dest is already correct      → skip (idempotent)
 #   dest is a wrong symlink      → warn+skip | --force: replace
 #   dest is a regular file/dir   → warn+skip | --force: backup (.bak) + replace
+#   dest is an untouched /etc/skel copy (e.g. a fresh ~/.bashrc)
+#                                → backup (.bak) + replace, no --force needed
 # ---------------------------------------------------------------------------
 link_dotfile() {
   local src="$1"    # absolute path inside the repo
@@ -34,6 +36,14 @@ link_dotfile() {
     fi
     SKIPPED_DOTFILES+=("${dest} (already linked)")
     return 0
+  fi
+
+  # A regular file identical to its /etc/skel original is the distro default,
+  # not user content: replace it (with backup) as if --force were given.
+  local skel="${SKEL_DIR:-/etc/skel}/${dest#"$HOME"/}"
+  if [[ -f "$dest" && ! -L "$dest" && -f "$skel" ]] && cmp -s "$dest" "$skel"; then
+    log_info "Replacing distro default: ${dest} (identical to ${skel})"
+    force="true"
   fi
 
   # Destination exists (file, directory, or wrong symlink)
