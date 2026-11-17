@@ -48,7 +48,7 @@ packages:
     - org.libreoffice.LibreOffice
     - com.spotify.Client
     - com.transmissionbt.Transmission
-    - org.gnome.Cheese
+    - org.gnome.Snapshot     # GNOME Camera; Cheese is end-of-life on Flathub
     - org.raspberrypi.rpi-imager
 
   deb: []

@@ -35,7 +35,7 @@ packages:
 
     # Container tools pre-reqs
     - docker.io
-    - docker-compose
+    - docker-compose-v2      # "docker compose"; docker-compose is a transitional name
 
     # Database clients
     - postgresql-client

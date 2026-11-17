@@ -61,7 +61,7 @@ VirtualBox stay apt.
 | [ ] | [GitKraken](https://www.gitkraken.com) | Graphical git client | snap | dev, Flatpak `com.axosoft.GitKraken` |
 | ✅ | [Transmission](https://transmissionbt.com) | BitTorrent client | snap | desktop, Flatpak `com.transmissionbt.Transmission` |
 | [ ] | [Mailspring](https://getmailspring.com) | Desktop email client | snap | desktop, Flatpak `com.getmailspring.Mailspring` |
-| ✅ | [Cheese](https://gitlab.gnome.org/GNOME/cheese) | Webcam app, replaced by [GNOME Camera](https://apps.gnome.org/Snapshot/) | snap | desktop, Flatpak `org.gnome.Cheese` |
+| ✅ | [Cheese](https://gitlab.gnome.org/GNOME/cheese) | Webcam app, replaced by [GNOME Camera](https://apps.gnome.org/Snapshot/) | snap | desktop, Flatpak `org.gnome.Snapshot` (Cheese is end-of-life on Flathub) |
 | ✅ | [Alacritty](https://alacritty.org) | GPU-accelerated terminal emulator | classic snap | desktop, apt |
 | [ ] | [FileZilla](https://filezilla-project.org) | FTP and SFTP client | apt | desktop, Flatpak `org.filezillaproject.Filezilla` |
 | [ ] | [OrcaSlicer](https://github.com/SoftFever/OrcaSlicer) | 3D-printer slicer | Flatpak | desktop |
