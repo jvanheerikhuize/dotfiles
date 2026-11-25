@@ -1,24 +1,41 @@
-# Server profile — headless / SSH-accessible machines.
-# Extends base; adds server tooling. No GUI packages.
+# Server profile — headless / SSH-accessible machines hosting portfolio services.
+# Extends base; adds server security, reverse proxy, and language runtimes. No GUI packages.
 profile:
   name: server
   extends: base
 
 packages:
   apt:
-    # Remote access
+    # Remote access & unattended security patching
     - openssh-server
+    - unattended-upgrades
 
-    # Firewall
+    # Firewall & brute-force protection
     - ufw
-
-    # Brute-force protection
     - fail2ban
+
+    # Compressed RAM swap for constrained (4 GB) servers
+    - systemd-zram-generator
+
+    # Local reverse proxy & static site server
+    - caddy
+
+    # Agent & codebase search primitives (required by AGENTS.md)
+    - ripgrep
+    - fd-find
+
+    # Application runtimes for hosted portfolio services (lumen, digital-twin, wayforge, usb-*)
+    - nodejs
+    - npm
+    - node-corepack
+    - golang-go
+    - python3-dev
+    - sqlite3
+    - pkg-config
 
     # Network diagnostics
     - nmap
     - traceroute
-
 
     # Process / resource monitoring
     - sysstat
@@ -27,4 +44,13 @@ packages:
   snap: []
   flatpak: []
   deb: []
-  custom: []
+  custom:
+    # uv: Python package, venv and tool manager (required by digital-twin & spec tooling)
+    - cmd: curl -LsSf https://astral.sh/uv/install.sh | env UV_NO_MODIFY_PATH=1 sh
+      idempotency_check: test -x "$HOME/.local/bin/uv"
+
+    # pnpm and yarn shims through corepack, in the user's bin
+    - cmd: >-
+        mkdir -p "$HOME/.local/bin" &&
+        corepack enable --install-directory "$HOME/.local/bin" pnpm yarn
+      idempotency_check: test -e "$HOME/.local/bin/pnpm"
